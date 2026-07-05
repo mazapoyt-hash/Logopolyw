@@ -10,6 +10,43 @@
 </head>
 <body>
 
+<svg class="skyline-svg" viewBox="0 0 1200 300" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="980" cy="60" r="46" fill="#ffd9a0" opacity="0.55"/>
+  <g fill="#140d08" opacity="0.9">
+    <rect x="0"   y="150" width="60"  height="150"/>
+    <rect x="65"  y="110" width="40"  height="190"/>
+    <rect x="110" y="170" width="70"  height="130"/>
+    <rect x="185" y="90"  width="50"  height="210"/>
+    <rect x="240" y="140" width="55"  height="160"/>
+    <rect x="300" y="60"  width="45"  height="240"/>
+    <rect x="350" y="130" width="65"  height="170"/>
+    <rect x="420" y="95"  width="40"  height="205"/>
+    <rect x="465" y="160" width="80"  height="140"/>
+    <rect x="550" y="70"  width="50"  height="230"/>
+    <rect x="605" y="120" width="60"  height="180"/>
+    <rect x="670" y="45"  width="42"  height="255"/>
+    <rect x="718" y="150" width="70"  height="150"/>
+    <rect x="795" y="100" width="46"  height="200"/>
+    <rect x="846" y="165" width="60"  height="135"/>
+    <rect x="912" y="80"  width="48"  height="220"/>
+    <rect x="965" y="140" width="65"  height="160"/>
+    <rect x="1035" y="105" width="42" height="195"/>
+    <rect x="1082" y="155" width="58" height="145"/>
+    <rect x="1145" y="90"  width="55" height="210"/>
+  </g>
+  <g fill="#ffd9a0" opacity="0.5">
+    <rect x="20" y="175" width="6" height="8"/><rect x="35" y="200" width="6" height="8"/>
+    <rect x="80" y="140" width="6" height="8"/><rect x="80" y="170" width="6" height="8"/>
+    <rect x="200" y="120" width="6" height="8"/><rect x="215" y="160" width="6" height="8"/>
+    <rect x="315" y="90" width="6" height="8"/><rect x="315" y="140" width="6" height="8"/>
+    <rect x="480" y="190" width="6" height="8"/><rect x="500" y="210" width="6" height="8"/>
+    <rect x="620" y="150" width="6" height="8"/><rect x="640" y="190" width="6" height="8"/>
+    <rect x="735" y="180" width="6" height="8"/><rect x="755" y="210" width="6" height="8"/>
+    <rect x="925" y="110" width="6" height="8"/><rect x="940" y="150" width="6" height="8"/>
+    <rect x="1055" y="135" width="6" height="8"/><rect x="1095" y="180" width="6" height="8"/>
+  </g>
+</svg>
+
 <div id="config-warning" class="config-warning hidden">
   ⚠️ Firebase не настроен. Откройте <code>firebase-config.js</code> и вставьте туда конфигурацию
   вашего проекта Firebase (см. README.md), иначе игра по сети работать не будет.
@@ -54,7 +91,18 @@
 
 <!-- GAME -->
 <section id="screen-game" class="screen hidden">
-  <div id="top-bar" class="top-bar"></div>
+  <div class="game-topline">
+    <button class="icon-btn" onclick="toggleMenu()">☰</button>
+    <div id="top-bar" class="top-bar"></div>
+    <button class="icon-btn chat-btn" onclick="toggleChat()">💬<span id="chat-badge" class="chat-badge hidden">•</span></button>
+  </div>
+
+  <div id="game-menu" class="game-menu hidden">
+    <button class="action-btn" onclick="toggleMenu();openRulesInfo();">📜 Правила / упрощения</button>
+    <button class="action-btn" onclick="toggleMenu();confirmLeave();">🚪 Покинуть игру</button>
+  </div>
+
+  <div id="event-layer" class="event-layer"></div>
 
   <div id="board-wrap" class="board-wrap">
     <div id="board-grid" class="board-grid"></div>
@@ -64,12 +112,39 @@
 
   <div class="bottom-bar">
     <div id="static-actions" class="static-actions">
-      <button class="action-btn" onclick="openTradeModal()">🤝 Сделка</button>
-      <button class="action-btn" onclick="leaveRoom()">🚪 Выйти</button>
+      <button class="icon-action" id="btn-trade" onclick="openTradeModal()"><span class="icon-circle">🤝</span><span>Сделка</span></button>
+      <span id="turn-actions" style="display:contents">
+        <button class="icon-action" onclick="openBuildModal()"><span class="icon-circle">🏠</span><span>Строить</span></button>
+        <button class="icon-action" onclick="openSellModal()"><span class="icon-circle">💵</span><span>Продать</span></button>
+        <button class="icon-action" onclick="openMortgageModal()"><span class="icon-circle">🏦</span><span>Залог</span></button>
+        <button class="icon-action" onclick="openRedeemModal()"><span class="icon-circle">↩️</span><span>Выкуп</span></button>
+      </span>
     </div>
     <div id="action-bar" class="action-bar"></div>
   </div>
 </section>
+
+<!-- CHAT DRAWER -->
+<div id="chat-drawer" class="chat-drawer hidden">
+  <div class="chat-header">
+    <span>Чат комнаты</span>
+    <button class="modal-close" onclick="toggleChat()">✕</button>
+  </div>
+  <div id="chat-messages" class="chat-messages"></div>
+  <form id="chat-form" class="chat-form" onsubmit="event.preventDefault(); submitChat();">
+    <input id="chat-input" type="text" maxlength="300" placeholder="Написать в чат…" autocomplete="off">
+    <button class="action-btn primary" type="submit">➤</button>
+  </form>
+</div>
+
+<!-- GENERIC LIST MODAL (Build / Sell / Mortgage / Redeem) -->
+<div id="list-modal" class="modal hidden">
+  <div class="modal-box">
+    <button class="modal-close" onclick="document.getElementById('list-modal').classList.add('hidden')">✕</button>
+    <h3 id="list-modal-title"></h3>
+    <div id="list-modal-body" class="list-modal-body"></div>
+  </div>
+</div>
 
 <!-- TILE INFO MODAL -->
 <div id="tile-modal" class="modal hidden">
