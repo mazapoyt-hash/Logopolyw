@@ -7,6 +7,165 @@ function showScreen(id) {
   document.getElementById(id).classList.remove('hidden');
 }
 
+/* ---- Event card queue (dice rolls, purchases, rent, Chance/Chest, etc.) ---- */
+
+const EVENT_META = {
+  dice:          { icon: '🎲', cls: 'ev-dice',      duration: 1500 },
+  'money-plus':  { icon: '💰', cls: 'ev-money-plus', duration: 1900 },
+  'money-minus': { icon: '💸', cls: 'ev-money-minus',duration: 1900 },
+  rent:          { icon: '🏠', cls: 'ev-rent',       duration: 2100 },
+  buy:           { icon: '🏷️', cls: 'ev-buy',        duration: 2300 },
+  build:         { icon: '🏗️', cls: 'ev-build',      duration: 2100 },
+  mortgage:      { icon: '🏦', cls: 'ev-mortgage',   duration: 2100 },
+  jail:          { icon: '🚔', cls: 'ev-jail',       duration: 2300 },
+  trade:         { icon: '🤝', cls: 'ev-trade',      duration: 2300 },
+  bankrupt:      { icon: '💥', cls: 'ev-bankrupt',   duration: 2800 },
+  win:           { icon: '🏆', cls: 'ev-win',        duration: 4200 },
+  'card-chance': { icon: '❓', cls: 'ev-chance',     duration: 3800, big: true, deck: 'ШАНС' },
+  'card-chest':  { icon: '📦', cls: 'ev-chest',      duration: 3800, big: true, deck: 'ОБЩЕСТВЕННАЯ КАЗНА' },
+  info:          { icon: 'ℹ️', cls: 'ev-info',       duration: 1900 }
+};
+
+let eventQueue = [];
+let eventBusy = false;
+
+function pushEvent(kind, text) {
+  eventQueue.push({ kind, text });
+  processEventQueue();
+}
+
+function processEventQueue() {
+  if (eventBusy || eventQueue.length === 0) return;
+  eventBusy = true;
+  const { kind, text } = eventQueue.shift();
+  const meta = EVENT_META[kind] || EVENT_META.info;
+  const layer = document.getElementById('event-layer');
+
+  const card = document.createElement('div');
+  card.className = `event-card ${meta.cls}${meta.big ? ' big' : ''}`;
+  card.innerHTML = meta.big
+    ? `<div class="event-deck-label">${meta.icon} ${meta.deck}</div><div class="event-card-text">${text}</div>`
+    : `<div class="event-icon">${meta.icon}</div><div class="event-text">${text}</div>`;
+  layer.appendChild(card);
+  requestAnimationFrame(() => card.classList.add('show'));
+
+  setTimeout(() => {
+    card.classList.remove('show');
+    card.classList.add('leave');
+    setTimeout(() => {
+      card.remove();
+      eventBusy = false;
+      processEventQueue();
+    }, 320);
+  }, meta.duration);
+}
+
+let trackedRoomCode = null;
+let lastLogLen = 0;
+
+function syncEventsFromLog(s) {
+  if (trackedRoomCode !== currentRoomCode) {
+    trackedRoomCode = currentRoomCode;
+    lastLogLen = s.log.length;
+    lastPositions = {};
+    lastInJail = {};
+    return;
+  }
+  if (s.log.length > lastLogLen) {
+    s.log.slice(lastLogLen).forEach(entry => pushEvent(entry.kind || 'info', entry.text));
+    lastLogLen = s.log.length;
+  } else if (s.log.length < lastLogLen) {
+    lastLogLen = s.log.length; // room reset / new game
+  }
+}
+
+/* ---- Animated player tokens (hop across tiles instead of teleporting) ---- */
+
+let tokenEls = {};
+let lastPositions = {};
+let lastInJail = {};
+
+const TOKEN_SLOT_OFFSETS = [
+  [-13, -13], [13, -13], [-13, 13], [13, 13],
+  [0, -15], [0, 15], [-15, 0], [15, 0]
+];
+
+function tileCenterPercent(idx) {
+  const pos = tilePos(idx);
+  return {
+    leftPct: ((pos.col - 1) + 0.5) / 11 * 100,
+    topPct: ((pos.row - 1) + 0.5) / 11 * 100
+  };
+}
+
+function positionToken(el, idx, slot) {
+  const { leftPct, topPct } = tileCenterPercent(idx);
+  const off = TOKEN_SLOT_OFFSETS[slot % TOKEN_SLOT_OFFSETS.length];
+  el.style.left = `calc(${leftPct}% + ${off[0]}px)`;
+  el.style.top = `calc(${topPct}% + ${off[1]}px)`;
+}
+
+function minDistance(a, b) {
+  const d = (b - a + 40) % 40;
+  return Math.min(d, 40 - d);
+}
+
+function walkToken(el, from, to, slot) {
+  const fwd = (to - from + 40) % 40;
+  const bwd = (from - to + 40) % 40;
+  const steps = [];
+  let cur = from;
+  if (fwd <= bwd) {
+    for (let i = 0; i < fwd; i++) { cur = (cur + 1) % 40; steps.push(cur); }
+  } else {
+    for (let i = 0; i < bwd; i++) { cur = (cur - 1 + 40) % 40; steps.push(cur); }
+  }
+  let i = 0;
+  (function step() {
+    if (i >= steps.length) return;
+    positionToken(el, steps[i], slot);
+    i++;
+    setTimeout(step, 110);
+  })();
+}
+
+function flashToken(el) {
+  el.classList.remove('token-flash');
+  void el.offsetWidth; // restart animation
+  el.classList.add('token-flash');
+}
+
+function renderTokensLayer(s) {
+  const layer = document.getElementById('token-layer');
+  s.order.forEach(pid => {
+    const p = s.players[pid];
+    const slot = s.order.indexOf(pid);
+    let el = tokenEls[pid];
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'board-token';
+      el.style.background = p.color;
+      el.textContent = TOKEN_ICONS[p.token];
+      layer.appendChild(el);
+      tokenEls[pid] = el;
+      positionToken(el, p.position, slot);
+      lastPositions[pid] = p.position;
+      lastInJail[pid] = p.inJail;
+    }
+    el.style.display = p.bankrupt ? 'none' : 'flex';
+
+    const prevPos = lastPositions[pid];
+    const prevJail = lastInJail[pid];
+    if (prevPos !== p.position) {
+      const teleport = (p.inJail && !prevJail) || minDistance(prevPos, p.position) > 12;
+      if (teleport) { positionToken(el, p.position, slot); flashToken(el); }
+      else { walkToken(el, prevPos, p.position, slot); }
+    }
+    lastPositions[pid] = p.position;
+    lastInJail[pid] = p.inJail;
+  });
+}
+
 /* ---- Token / color pickers on lobby screen ---- */
 function renderPickers() {
   const tokWrap = document.getElementById('token-picker');
@@ -79,7 +238,6 @@ function buildBoardOnce() {
     if (tile.type === 'tax') inner += `<div class="tile-price">₽${tile.amount}</div>`;
     inner += `<div class="tile-houses"></div>`;
     inner += `<div class="tile-owner"></div>`;
-    inner += `<div class="tile-tokens"></div>`;
     div.innerHTML = inner;
     div.onclick = () => openTileInfo(tile.i);
     grid.appendChild(div);
@@ -99,23 +257,38 @@ function buildBoardOnce() {
     <div id="log-panel" class="log-panel"></div>
   `;
   grid.appendChild(center);
+
+  const tokenLayer = document.createElement('div');
+  tokenLayer.id = 'token-layer';
+  grid.appendChild(tokenLayer);
+
   boardBuilt = true;
 }
 
 /* ---- Full game render ---- */
 function renderGame(s) {
   buildBoardOnce();
+  syncEventsFromLog(s);
   renderTopBar(s);
   renderBoardState(s);
+  renderTokensLayer(s);
   renderDice(s);
   renderTurnBanner(s);
   renderLog(s);
   renderActionBar(s);
   renderTrade(s);
+  renderChat(s);
   renderWinner(s);
 }
 
+let prevMoneyByPid = {};
+let moneyTrackedRoom = null;
+
 function renderTopBar(s) {
+  if (moneyTrackedRoom !== currentRoomCode) {
+    moneyTrackedRoom = currentRoomCode;
+    prevMoneyByPid = {};
+  }
   const bar = document.getElementById('top-bar');
   bar.innerHTML = '';
   s.order.forEach((pid, idx) => {
@@ -131,6 +304,15 @@ function renderTopBar(s) {
       </div>
       ${p.inJail ? '<div class="jail-badge">🔒</div>' : ''}
     `;
+    const prev = prevMoneyByPid[pid];
+    if (prev !== undefined && prev !== p.money && !p.bankrupt) {
+      const delta = p.money - prev;
+      const f = document.createElement('div');
+      f.className = 'money-float ' + (delta > 0 ? 'pos' : 'neg');
+      f.textContent = (delta > 0 ? '+' : '') + delta;
+      card.appendChild(f);
+    }
+    prevMoneyByPid[pid] = p.money;
     bar.appendChild(card);
   });
 }
@@ -141,33 +323,36 @@ function renderBoardState(s) {
     const prop = s.properties[idx];
     const ownerDiv = div.querySelector('.tile-owner');
     const housesDiv = div.querySelector('.tile-houses');
-    const tokensDiv = div.querySelector('.tile-tokens');
     ownerDiv.style.background = prop ? s.players[prop.owner].color : 'transparent';
     ownerDiv.style.opacity = prop ? (prop.mortgaged ? 0.3 : 1) : 0;
     housesDiv.innerHTML = '';
     if (prop && prop.houses > 0) {
       housesDiv.innerHTML = prop.houses === 5 ? '🏨' : '🏠'.repeat(prop.houses);
     }
-    tokensDiv.innerHTML = '';
-    s.order.forEach(pid => {
-      const p = s.players[pid];
-      if (!p.bankrupt && String(p.position) === String(idx)) {
-        const t = document.createElement('span');
-        t.className = 'token-dot';
-        t.style.background = p.color;
-        t.textContent = TOKEN_ICONS[p.token];
-        tokensDiv.appendChild(t);
-      }
-    });
   });
 }
 
+let lastDiceSig = '';
 function renderDice(s) {
   const d1 = document.getElementById('die1');
   const d2 = document.getElementById('die2');
   const faces = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
-  d1.textContent = s.dice && s.dice[0] ? faces[s.dice[0]] : '–';
-  d2.textContent = s.dice && s.dice[1] ? faces[s.dice[1]] : '–';
+
+  if (!s.dice || !s.dice[0]) {
+    lastDiceSig = '';
+    d1.textContent = '–'; d2.textContent = '–';
+    return;
+  }
+  const sig = s.dice.join(',');
+  if (sig === lastDiceSig) return;
+  lastDiceSig = sig;
+
+  [d1, d2].forEach(el => { el.classList.remove('rolling'); void el.offsetWidth; el.classList.add('rolling'); });
+  setTimeout(() => {
+    d1.textContent = faces[s.dice[0]];
+    d2.textContent = faces[s.dice[1]];
+    d1.classList.remove('rolling'); d2.classList.remove('rolling');
+  }, 500);
 }
 
 function renderTurnBanner(s) {
@@ -203,8 +388,11 @@ function renderWinner(s) {
 function renderActionBar(s) {
   const bar = document.getElementById('action-bar');
   const me = s.players[myPid];
-  const mine = isMyTurn(s) && me && !me.bankrupt && !s.winner;
+  const gameLive = me && !me.bankrupt && !s.winner;
+  const mine = isMyTurn(s) && gameLive;
   bar.innerHTML = '';
+
+  document.getElementById('btn-trade').disabled = !gameLive;
 
   if (!mine) {
     bar.innerHTML = `<div class="waiting-msg">${s.winner ? 'Игра окончена' : 'Ожидание хода другого игрока…'}</div>`;
@@ -229,8 +417,7 @@ function renderActionBar(s) {
 }
 
 function renderStaticButtons(enabled) {
-  const wrap = document.getElementById('static-actions');
-  wrap.querySelectorAll('button').forEach(b => b.disabled = !enabled);
+  document.querySelectorAll('#turn-actions button').forEach(b => b.disabled = !enabled);
 }
 
 /* ---- Tile info / build / mortgage popover ---- */
@@ -334,4 +521,132 @@ function renderTrade(s) {
     box.classList.add('hidden');
     box.innerHTML = '';
   }
+}
+
+/* ---- Hamburger menu ---- */
+function toggleMenu() {
+  document.getElementById('game-menu').classList.toggle('hidden');
+}
+
+function confirmLeave() {
+  if (confirm('Точно покинуть игру?')) leaveRoom();
+}
+
+function openRulesInfo() {
+  document.getElementById('tile-modal-body').innerHTML = `
+    <h3>Упрощения правил</h3>
+    <p>Эта онлайн-версия следует классическим правилам Монополии, с несколькими
+    упрощениями: нет аукциона при отказе от покупки, при долге автоматически
+    закладывается недвижимость без построек, сделки — прямые (без встречных
+    предложений).</p>`;
+  document.getElementById('tile-modal').classList.remove('hidden');
+}
+
+/* ---- Chat ---- */
+let lastChatLen = 0;
+let chatOpen = false;
+let trackedChatRoom = null;
+
+function toggleChat() {
+  chatOpen = !chatOpen;
+  document.getElementById('chat-drawer').classList.toggle('hidden', !chatOpen);
+  if (chatOpen) {
+    document.getElementById('chat-badge').classList.add('hidden');
+    const box = document.getElementById('chat-messages');
+    box.scrollTop = box.scrollHeight;
+  }
+}
+
+function submitChat() {
+  const input = document.getElementById('chat-input');
+  sendChatMessage(input.value);
+  input.value = '';
+}
+
+function renderChat(s) {
+  if (trackedChatRoom !== currentRoomCode) {
+    trackedChatRoom = currentRoomCode;
+    lastChatLen = (s.chat || []).length;
+  }
+  const chat = s.chat || [];
+  const box = document.getElementById('chat-messages');
+  box.innerHTML = chat.map(m => `
+    <div class="chat-msg${m.pid === myPid ? ' mine' : ''}">
+      <span class="who" style="color:${m.color}">${m.name}:</span>${escapeHtml(m.text)}
+    </div>`).join('') || '<div class="empty-note">Пока никто не писал</div>';
+  if (chat.length > lastChatLen) {
+    if (!chatOpen) document.getElementById('chat-badge').classList.remove('hidden');
+    box.scrollTop = box.scrollHeight;
+  }
+  lastChatLen = chat.length;
+}
+
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+/* ---- Generic list modals: Build / Sell / Mortgage / Redeem ---- */
+function showListModal(title, rows) {
+  document.getElementById('list-modal-title').textContent = title;
+  document.getElementById('list-modal-body').innerHTML = rows || '<div class="empty-note">Нет доступных вариантов</div>';
+  document.getElementById('list-modal').classList.remove('hidden');
+}
+
+function openBuildModal() {
+  const s = latestState;
+  const tiles = buildableTiles(s);
+  const rows = tiles.map(idx => {
+    const t = BOARD[idx]; const prop = s.properties[idx];
+    return `<div class="list-row">
+      <div class="swatch" style="background:${GROUP_COLORS[t.group]}"></div>
+      <div class="info"><b>${t.name}</b><span class="sub">Сейчас: ${prop.houses === 5 ? 'отель' : prop.houses + ' дом(ов)'} · цена дома ₽${t.houseCost}</span></div>
+      <button class="action-btn primary" onclick="buildHouse(${idx});openBuildModal();">Построить</button>
+    </div>`;
+  }).join('');
+  showListModal('🏠 Строительство', rows);
+}
+
+function openSellModal() {
+  const s = latestState;
+  const tiles = sellableTiles(s);
+  const rows = tiles.map(idx => {
+    const t = BOARD[idx]; const prop = s.properties[idx];
+    return `<div class="list-row">
+      <div class="swatch" style="background:${GROUP_COLORS[t.group]}"></div>
+      <div class="info"><b>${t.name}</b><span class="sub">Сейчас: ${prop.houses === 5 ? 'отель' : prop.houses + ' дом(ов)'} · вернём ₽${Math.floor(t.houseCost / 2)}</span></div>
+      <button class="action-btn" onclick="sellHouse(${idx});openSellModal();">Продать</button>
+    </div>`;
+  }).join('');
+  showListModal('💵 Продажа домов', rows);
+}
+
+function openMortgageModal() {
+  const s = latestState;
+  const tiles = mortgageableTiles(s);
+  const rows = tiles.map(idx => {
+    const t = BOARD[idx];
+    return `<div class="list-row">
+      <div class="swatch" style="background:${GROUP_COLORS[t.group] || '#888'}"></div>
+      <div class="info"><b>${t.name}</b><span class="sub">Получите ₽${t.mortgage}</span></div>
+      <button class="action-btn" onclick="toggleMortgage(${idx});openMortgageModal();">Заложить</button>
+    </div>`;
+  }).join('');
+  showListModal('🏦 Залог недвижимости', rows);
+}
+
+function openRedeemModal() {
+  const s = latestState;
+  const tiles = redeemableTiles(s);
+  const rows = tiles.map(idx => {
+    const t = BOARD[idx];
+    const cost = Math.ceil(t.mortgage * 1.1);
+    return `<div class="list-row">
+      <div class="swatch" style="background:${GROUP_COLORS[t.group] || '#888'}"></div>
+      <div class="info"><b>${t.name}</b><span class="sub">Выкуп за ₽${cost}</span></div>
+      <button class="action-btn primary" onclick="toggleMortgage(${idx});openRedeemModal();">Выкупить</button>
+    </div>`;
+  }).join('');
+  showListModal('↩️ Выкуп залога', rows);
 }
