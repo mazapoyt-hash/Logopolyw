@@ -52,7 +52,8 @@ function freshState(hostPid, hostName, hostToken, hostColor) {
     lastRoll: null,
     winner: null,
     pendingTrade: null,
-    log: [{ text: `${hostName} создал комнату`, ts: Date.now() }],
+    chat: [],
+    log: [{ text: `${hostName} создал комнату`, ts: Date.now(), kind: 'info' }],
     players: {
       [hostPid]: mkPlayer(hostName, hostToken, hostColor)
     },
@@ -82,6 +83,7 @@ function normalizeState(s) {
   s.order = s.order || [];
   s.players = s.players || {};
   s.log = s.log || [];
+  s.chat = s.chat || [];
   s.dice = s.dice || [0, 0];
   return s;
 }
@@ -96,9 +98,9 @@ function updateRoom(mutator) {
   });
 }
 
-function log(state, text) {
+function log(state, text, kind) {
   state.log = state.log || [];
-  state.log.push({ text, ts: Date.now() });
+  state.log.push({ text, ts: Date.now(), kind: kind || 'info' });
   if (state.log.length > 60) state.log.splice(0, state.log.length - 60);
 }
 
@@ -208,21 +210,22 @@ function rollDice() {
     const d2 = 1 + Math.floor(Math.random() * 6);
     s.dice = [d1, d2];
     const isDouble = d1 === d2;
+    log(s, `${p.name} бросил кубики: ${d1} и ${d2}`, 'dice');
 
     if (p.inJail) {
       if (isDouble) {
         p.inJail = false;
         p.jailTurns = 0;
-        log(s, `${p.name} выбросил дубль и вышел из тюрьмы!`);
+        log(s, `${p.name} выбросил дубль и вышел из тюрьмы!`, 'jail');
         movePlayer(s, myPid, d1 + d2);
       } else {
         p.jailTurns = (p.jailTurns || 0) + 1;
-        log(s, `${p.name} не выбросил дубль в тюрьме (попытка ${p.jailTurns}/3)`);
+        log(s, `${p.name} не выбросил дубль в тюрьме (попытка ${p.jailTurns}/3)`, 'jail');
         if (p.jailTurns >= 3) {
           p.money -= 50;
           p.inJail = false;
           p.jailTurns = 0;
-          log(s, `${p.name} заплатил ₽50 и вышел из тюрьмы`);
+          log(s, `${p.name} заплатил ₽50 и вышел из тюрьмы`, 'jail');
           movePlayer(s, myPid, d1 + d2);
         } else {
           s.turnPhase = 'moved';
@@ -235,7 +238,7 @@ function rollDice() {
     if (isDouble) {
       s.doublesCount = (s.doublesCount || 0) + 1;
       if (s.doublesCount >= 3) {
-        log(s, `${p.name} выбросил 3 дубля подряд и отправляется в тюрьму!`);
+        log(s, `${p.name} выбросил 3 дубля подряд и отправляется в тюрьму!`, 'jail');
         sendToJail(s, myPid);
         s.doublesCount = 0;
         s.turnPhase = 'moved';
@@ -257,7 +260,7 @@ function movePlayer(s, pid, steps) {
   if (after < 0) after += 40;
   if (after < before) {
     p.money += 200;
-    log(s, `${p.name} прошёл СТАРТ и получил ₽200`);
+    log(s, `${p.name} прошёл СТАРТ и получил ₽200`, 'money-plus');
   }
   p.position = after;
   resolveTile(s, pid, after);
@@ -272,7 +275,7 @@ function resolveTile(s, pid, idx) {
 
   else if (tile.type === 'tax') {
     p.money -= tile.amount;
-    log(s, `${p.name} заплатил налог ₽${tile.amount}`);
+    log(s, `${p.name} заплатил налог ₽${tile.amount}`, 'money-minus');
   }
 
   else if (tile.type === 'gotojail') {
@@ -295,7 +298,7 @@ function resolveTile(s, pid, idx) {
       const rent = computeRent(s, idx);
       p.money -= rent;
       s.players[prop.owner].money += rent;
-      log(s, `${p.name} заплатил аренду ₽${rent} игроку ${s.players[prop.owner].name}`);
+      log(s, `${p.name} заплатил аренду ₽${rent} игроку ${s.players[prop.owner].name}`, 'rent');
     }
   }
 }
@@ -340,14 +343,14 @@ function sendToJail(s, pid) {
   p.position = 10;
   p.inJail = true;
   p.jailTurns = 0;
-  log(s, `${p.name} отправляется в тюрьму`);
+  log(s, `${p.name} отправляется в тюрьму`, 'jail');
 }
 
 function drawCard(s, pid, kind) {
   const deck = kind === 'chance' ? CHANCE_CARDS : CHEST_CARDS;
   const card = deck[Math.floor(Math.random() * deck.length)];
   const p = s.players[pid];
-  log(s, `${p.name}: ${card.text}`);
+  log(s, `${p.name}: ${card.text}`, kind === 'chance' ? 'card-chance' : 'card-chest');
   const a = card.action;
 
   if (a.type === 'move') {
@@ -404,7 +407,7 @@ function drawCard(s, pid, kind) {
       }
     });
     p.money -= total;
-    log(s, `${p.name} заплатил ₽${total} за ремонт`);
+    log(s, `${p.name} заплатил ₽${total} за ремонт`, 'money-minus');
   }
 }
 
@@ -420,7 +423,7 @@ function buyCurrentTile() {
     if (p.money < tile.price) return;
     p.money -= tile.price;
     s.properties[idx] = { owner: myPid, houses: 0, mortgaged: false };
-    log(s, `${p.name} купил ${tile.name} за ₽${tile.price}`);
+    log(s, `${p.name} купил ${tile.name} за ₽${tile.price}`, 'buy');
     s.turnPhase = 'moved';
   });
 }
@@ -430,7 +433,7 @@ function skipBuy() {
     if (s.order[s.turnIndex] !== myPid) return;
     if (s.turnPhase !== 'awaiting-buy') return;
     s.turnPhase = 'moved';
-    log(s, `${s.players[myPid].name} отказался от покупки`);
+    log(s, `${s.players[myPid].name} отказался от покупки`, 'info');
   });
 }
 
@@ -468,7 +471,7 @@ function advanceTurn(s) {
   const remaining = s.order.filter(id => !s.players[id].bankrupt);
   if (remaining.length === 1) {
     s.winner = remaining[0];
-    log(s, `🏆 ${s.players[remaining[0]].name} победил!`);
+    log(s, `🏆 ${s.players[remaining[0]].name} победил!`, 'win');
   }
 }
 
@@ -483,7 +486,7 @@ function checkBankruptcy(s, pid) {
       if (!pr.mortgaged && pr.houses === 0) {
         pr.mortgaged = true;
         p.money += BOARD[k].mortgage;
-        log(s, `${p.name} заложил ${BOARD[k].name}, чтобы покрыть долг`);
+        log(s, `${p.name} заложил ${BOARD[k].name}, чтобы покрыть долг`, 'mortgage');
       }
     }
   }
@@ -493,11 +496,11 @@ function checkBankruptcy(s, pid) {
     Object.keys(s.properties).forEach(k => {
       if (s.properties[k].owner === pid) delete s.properties[k];
     });
-    log(s, `💥 ${p.name} обанкротился и выбывает из игры`);
+    log(s, `💥 ${p.name} обанкротился и выбывает из игры`, 'bankrupt');
     const remaining = s.order.filter(id => !s.players[id].bankrupt);
     if (remaining.length === 1) {
       s.winner = remaining[0];
-      log(s, `🏆 ${s.players[remaining[0]].name} победил!`);
+      log(s, `🏆 ${s.players[remaining[0]].name} победил!`, 'win');
     }
   }
 }
@@ -512,7 +515,7 @@ function payJailFine() {
     p.money -= 50;
     p.inJail = false;
     p.jailTurns = 0;
-    log(s, `${p.name} заплатил ₽50 и вышел из тюрьмы`);
+    log(s, `${p.name} заплатил ₽50 и вышел из тюрьмы`, 'jail');
     checkBankruptcy(s, myPid);
   });
 }
@@ -525,7 +528,7 @@ function useJailCard() {
     p.jailCards -= 1;
     p.inJail = false;
     p.jailTurns = 0;
-    log(s, `${p.name} использовал карту освобождения из тюрьмы`);
+    log(s, `${p.name} использовал карту освобождения из тюрьмы`, 'jail');
   });
 }
 
@@ -547,7 +550,7 @@ function buildHouse(idx) {
     if (p.money < tile.houseCost) return;
     p.money -= tile.houseCost;
     prop.houses += 1;
-    log(s, `${p.name} построил ${prop.houses === 5 ? 'отель' : 'дом'} на ${tile.name}`);
+    log(s, `${p.name} построил ${prop.houses === 5 ? 'отель' : 'дом'} на ${tile.name}`, 'build');
   });
 }
 
@@ -562,7 +565,7 @@ function sellHouse(idx) {
     if (prop.houses < maxHouses) return;
     prop.houses -= 1;
     p.money += Math.floor(tile.houseCost / 2);
-    log(s, `${p.name} продал дом на ${tile.name}`);
+    log(s, `${p.name} продал дом на ${tile.name}`, 'build');
   });
 }
 
@@ -576,13 +579,13 @@ function toggleMortgage(idx) {
       if (prop.houses > 0) return;
       prop.mortgaged = true;
       p.money += tile.mortgage;
-      log(s, `${p.name} заложил ${tile.name} за ₽${tile.mortgage}`);
+      log(s, `${p.name} заложил ${tile.name} за ₽${tile.mortgage}`, 'mortgage');
     } else {
       const cost = Math.ceil(tile.mortgage * 1.1);
       if (p.money < cost) return;
       p.money -= cost;
       prop.mortgaged = false;
-      log(s, `${p.name} выкупил ${tile.name} за ₽${cost}`);
+      log(s, `${p.name} выкупил ${tile.name} за ₽${cost}`, 'mortgage');
     }
   });
 }
@@ -597,7 +600,7 @@ function proposeTrade(toPid, offerMoney, offerProps, requestMoney, requestProps)
       requestMoney: requestMoney || 0, requestProps: requestProps || [],
       status: 'pending'
     };
-    log(s, `${s.players[myPid].name} предложил сделку игроку ${s.players[toPid].name}`);
+    log(s, `${s.players[myPid].name} предложил сделку игроку ${s.players[toPid].name}`, 'trade');
   });
 }
 
@@ -612,16 +615,67 @@ function respondTrade(accept) {
       to.money -= t.requestMoney; from.money += t.requestMoney;
       t.offerProps.forEach(idx => { if (s.properties[idx]) s.properties[idx].owner = t.to; });
       t.requestProps.forEach(idx => { if (s.properties[idx]) s.properties[idx].owner = t.from; });
-      log(s, `Сделка между ${from.name} и ${to.name} состоялась`);
+      log(s, `Сделка между ${from.name} и ${to.name} состоялась`, 'trade');
     } else {
-      log(s, `${s.players[myPid].name} отклонил сделку`);
+      log(s, `${s.players[myPid].name} отклонил сделку`, 'trade');
     }
     s.pendingTrade = null;
   });
 }
 
+/* ---------------- Read-only helpers for action modals ---------------- */
+
+function myOwnedTiles(s) {
+  return Object.keys(s.properties).filter(k => s.properties[k].owner === myPid).map(k => parseInt(k, 10));
+}
+
+function buildableTiles(s) {
+  return myOwnedTiles(s).filter(idx => {
+    const tile = BOARD[idx];
+    const prop = s.properties[idx];
+    if (tile.type !== 'property' || prop.mortgaged || prop.houses >= 5) return false;
+    if (!groupFullyOwned(s, tile.group, myPid)) return false;
+    const groupTiles = BOARD.filter(t => t.group === tile.group);
+    const minHouses = Math.min(...groupTiles.map(t => (s.properties[t.i] ? s.properties[t.i].houses : 0)));
+    return prop.houses <= minHouses;
+  });
+}
+
+function sellableTiles(s) {
+  return myOwnedTiles(s).filter(idx => {
+    const tile = BOARD[idx];
+    const prop = s.properties[idx];
+    if (prop.houses <= 0) return false;
+    const groupTiles = BOARD.filter(t => t.group === tile.group);
+    const maxHouses = Math.max(...groupTiles.map(t => (s.properties[t.i] ? s.properties[t.i].houses : 0)));
+    return prop.houses >= maxHouses;
+  });
+}
+
+function mortgageableTiles(s) {
+  return myOwnedTiles(s).filter(idx => !s.properties[idx].mortgaged && s.properties[idx].houses === 0);
+}
+
+function redeemableTiles(s) {
+  return myOwnedTiles(s).filter(idx => s.properties[idx].mortgaged);
+}
+
 function cancelTrade() {
   updateRoom(s => {
     if (s.pendingTrade && s.pendingTrade.from === myPid) s.pendingTrade = null;
+  });
+}
+
+/* ---------------- Chat ---------------- */
+
+function sendChatMessage(text) {
+  text = (text || '').trim();
+  if (!text) return;
+  updateRoom(s => {
+    const p = s.players[myPid];
+    if (!p) return;
+    s.chat = s.chat || [];
+    s.chat.push({ pid: myPid, name: p.name, color: p.color, text: text.slice(0, 300), ts: Date.now() });
+    if (s.chat.length > 200) s.chat.splice(0, s.chat.length - 200);
   });
 }
