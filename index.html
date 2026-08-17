@@ -11,8 +11,8 @@
 <body>
 
 <header class="tr-header">
-  <h1>🐞 Трекер <span>задач</span></h1>
-  <p class="tr-subtitle">Баги, идеи и доработки — вместо переписки в мессенджере</p>
+  <h1>🗂 Трекер <span>задач</span></h1>
+  <p class="tr-subtitle">Баги, идеи и дела — с приоритетами, сроками и статусами</p>
 </header>
 
 <main class="tr-main">
@@ -20,43 +20,38 @@
   <!-- ---------------- Форма создания / редактирования ---------------- -->
   <section class="tr-card">
     <form id="task-form" class="tr-form" autocomplete="off">
-      <input type="hidden" id="field-id">
-
-      <label for="field-title">Что нужно сделать / что сломалось</label>
-      <input id="field-title" type="text" maxlength="120" placeholder="Например: чат не прокручивается вниз при новом сообщении" required>
+      <label for="field-title">Задача</label>
+      <input id="field-title" type="text" maxlength="120" placeholder="Что нужно сделать или что сломалось" required>
 
       <label for="field-desc">Подробности <span class="tr-hint">(шаги воспроизведения, ссылки — необязательно)</span></label>
-      <textarea id="field-desc" rows="3" maxlength="2000" placeholder="1. Открыть чат&#10;2. Написать 10 сообщений&#10;3. Список не доезжает до последнего"></textarea>
+      <textarea id="field-desc" rows="3" maxlength="2000" placeholder="1. Что делаю&#10;2. Что ожидаю&#10;3. Что происходит на самом деле"></textarea>
 
       <div class="tr-form-row">
         <div>
           <label for="field-priority">Приоритет</label>
           <select id="field-priority">
-            <option value="0">🔥 Критичный — ломает игру</option>
+            <option value="0">🔥 Критичный</option>
             <option value="1">⬆️ Высокий</option>
             <option value="2" selected>➖ Средний</option>
-            <option value="3">⬇️ Низкий — когда-нибудь</option>
+            <option value="3">⬇️ Низкий</option>
           </select>
         </div>
         <div>
-          <label for="field-tag">Раздел</label>
-          <select id="field-tag">
-            <option value="bug" selected>Баг</option>
-            <option value="chat">Чат / мессенджер</option>
-            <option value="board">Доска / поля</option>
-            <option value="trade">Сделки</option>
-            <option value="net">Сеть / Firebase</option>
-            <option value="ui">Интерфейс</option>
-            <option value="idea">Идея / фича</option>
-          </select>
+          <label for="field-cat">Раздел</label>
+          <select id="field-cat"></select>
         </div>
         <div>
           <label for="field-status">Статус</label>
           <select id="field-status">
             <option value="new" selected>Новая</option>
             <option value="progress">В работе</option>
+            <option value="hold">Отложена</option>
             <option value="done">Готово</option>
           </select>
+        </div>
+        <div>
+          <label for="field-due">Срок <span class="tr-hint">(если есть)</span></label>
+          <input id="field-due" type="date">
         </div>
       </div>
 
@@ -78,6 +73,7 @@
       <label class="tr-inline">Сортировка
         <select id="sort-mode">
           <option value="priority" selected>По приоритету</option>
+          <option value="due">По сроку</option>
           <option value="created-desc">Сначала новые</option>
           <option value="created-asc">Сначала старые</option>
           <option value="status">По статусу</option>
@@ -95,16 +91,7 @@
       </label>
 
       <label class="tr-inline">Раздел
-        <select id="filter-tag">
-          <option value="all" selected>Все</option>
-          <option value="bug">Баг</option>
-          <option value="chat">Чат / мессенджер</option>
-          <option value="board">Доска / поля</option>
-          <option value="trade">Сделки</option>
-          <option value="net">Сеть / Firebase</option>
-          <option value="ui">Интерфейс</option>
-          <option value="idea">Идея / фича</option>
-        </select>
+        <select id="filter-cat"></select>
       </label>
 
       <div class="tr-chips" id="status-chips">
@@ -112,6 +99,7 @@
         <button type="button" class="tr-chip" data-status="open">Открытые</button>
         <button type="button" class="tr-chip" data-status="new">Новые</button>
         <button type="button" class="tr-chip" data-status="progress">В работе</button>
+        <button type="button" class="tr-chip" data-status="hold">Отложенные</button>
         <button type="button" class="tr-chip" data-status="done">Готовые</button>
       </div>
     </div>
@@ -120,11 +108,23 @@
   <!-- ---------------- Список ---------------- -->
   <section id="task-list" class="tr-list"></section>
 
+  <!-- ---------------- Разделы ---------------- -->
+  <section class="tr-card">
+    <h3>Разделы</h3>
+    <p class="tr-hint tr-block-hint">Свои категории задач. Удаление раздела не трогает задачи —
+      они переедут в «Другое».</p>
+    <div id="cat-manager" class="tr-cat-manager"></div>
+    <form id="cat-form" class="tr-cat-form" autocomplete="off">
+      <input id="cat-input" type="text" maxlength="24" placeholder="Новый раздел">
+      <button type="submit" class="action-btn">Добавить</button>
+    </form>
+  </section>
+
   <!-- ---------------- Данные ---------------- -->
-  <section class="tr-card tr-data">
+  <section class="tr-card">
     <h3>Данные</h3>
-    <p class="tr-hint">Задачи хранятся в этом браузере (localStorage). Чтобы перенести на другое
-      устройство или сохранить резервную копию — выгрузите файл.</p>
+    <p class="tr-hint tr-block-hint">Задачи хранятся в этом браузере (localStorage). Чтобы перенести
+      их на другое устройство или сохранить резервную копию — выгрузите файл.</p>
     <div class="tr-data-actions">
       <button type="button" class="action-btn" id="btn-export">⬇️ Выгрузить JSON</button>
       <button type="button" class="action-btn" id="btn-import">⬆️ Загрузить JSON</button>
