@@ -1,0 +1,223 @@
+/* ============================================================
+   Трекер задач — те же токены, что в style.css
+   ============================================================ */
+
+:root {
+  --wood-dark: #17100a;
+  --wood-mid: #3a2718;
+  --wood-light: #6b4a2c;
+  --felt: #0f3d2e;
+  --gold: #cf9b45;
+  --gold-bright: #f0c675;
+  --cream: #f4ecd8;
+  --ink: #241a12;
+  --danger: #c0392b;
+
+  --p0: #e0523f;  /* критичный */
+  --p1: #e08b2f;  /* высокий   */
+  --p2: #cf9b45;  /* средний   */
+  --p3: #7d8f86;  /* низкий    */
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  min-height: 100vh;
+  font-family: 'Inter', system-ui, sans-serif;
+  background:
+    radial-gradient(ellipse at 20% 0%, #2a1c11 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 100%, #2a1c11 0%, transparent 55%),
+    linear-gradient(160deg, var(--wood-dark), #241608 60%, var(--wood-dark));
+  color: var(--cream);
+}
+
+.hidden { display: none !important; }
+
+button { font-family: inherit; cursor: pointer; border: none; }
+input, select, textarea { font-family: inherit; }
+
+/* ---------------- Шапка ---------------- */
+.tr-header { max-width: 860px; margin: 0 auto; padding: 40px 20px 10px; }
+.tr-header h1 {
+  font-family: 'Playfair Display', serif;
+  font-weight: 900; font-size: 2.2rem; margin: 0 0 4px;
+  color: var(--gold-bright); letter-spacing: 0.5px;
+}
+.tr-header h1 span { color: var(--cream); font-weight: 700; }
+.tr-subtitle { color: #c9b696; font-size: 0.95rem; margin: 0; }
+
+.tr-main { max-width: 860px; margin: 0 auto; padding: 20px 20px 60px; display: flex; flex-direction: column; gap: 18px; }
+
+/* ---------------- Карточка-панель ---------------- */
+.tr-card {
+  background: linear-gradient(155deg, #2a1c11, #1c130c);
+  border: 1px solid rgba(207,155,69,0.25);
+  border-radius: 16px;
+  padding: 22px 24px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.03);
+}
+.tr-card h3 {
+  font-family: 'Playfair Display', serif; color: var(--gold-bright);
+  margin: 0 0 6px; font-size: 1.15rem;
+}
+
+/* ---------------- Форма ---------------- */
+.tr-form label {
+  display: block; font-size: 0.78rem; text-transform: uppercase;
+  letter-spacing: 0.06em; color: #c9b696; margin: 14px 0 6px;
+}
+.tr-form label:first-of-type { margin-top: 0; }
+.tr-hint { text-transform: none; letter-spacing: 0; color: #8a765a; font-size: 0.85em; }
+
+.tr-form input[type=text],
+.tr-form textarea,
+.tr-form select,
+.tr-search {
+  width: 100%; padding: 11px 13px; border-radius: 10px;
+  border: 1px solid rgba(207,155,69,0.3);
+  background: rgba(0,0,0,0.25); color: var(--cream); font-size: 0.98rem;
+}
+.tr-form textarea { resize: vertical; line-height: 1.45; }
+.tr-form input:focus, .tr-form textarea:focus, .tr-form select:focus, .tr-search:focus {
+  outline: none; border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(207,155,69,0.15);
+}
+.tr-form select option { background: #2a1c11; color: var(--cream); }
+
+.tr-form-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.tr-form-actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+
+.action-btn {
+  padding: 12px 18px; border-radius: 10px; font-weight: 600; font-size: 0.93rem;
+  background: rgba(255,255,255,0.08); color: var(--cream);
+  transition: transform 0.08s ease, background 0.15s ease;
+}
+.action-btn:hover { background: rgba(255,255,255,0.14); }
+.action-btn:active { transform: scale(0.97); }
+.action-btn.primary {
+  background: linear-gradient(160deg, var(--gold-bright), var(--gold));
+  color: #241608; font-weight: 700;
+}
+.action-btn.primary:hover { filter: brightness(1.07); }
+.action-btn.danger { color: #f0b8b0; }
+.action-btn.danger:hover { background: rgba(192,57,43,0.28); }
+
+/* ---------------- Статистика ---------------- */
+.tr-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.tr-stat {
+  background: rgba(0,0,0,0.28);
+  border: 1px solid rgba(207,155,69,0.18);
+  border-radius: 14px; padding: 14px 16px; text-align: center;
+}
+.tr-stat b {
+  display: block; font-family: 'Playfair Display', serif;
+  font-size: 1.7rem; color: var(--gold-bright); line-height: 1.1;
+}
+.tr-stat span { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: #c9b696; }
+.tr-stat.alert b { color: var(--p0); }
+
+/* ---------------- Панель фильтров ---------------- */
+.tr-toolbar { display: flex; flex-direction: column; gap: 14px; }
+.tr-toolbar-row { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: flex-end; }
+.tr-inline {
+  display: flex; flex-direction: column; gap: 5px;
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: #c9b696;
+}
+.tr-inline select {
+  padding: 8px 10px; border-radius: 9px;
+  border: 1px solid rgba(207,155,69,0.3);
+  background: rgba(0,0,0,0.25); color: var(--cream); font-size: 0.9rem;
+}
+.tr-inline select option { background: #2a1c11; }
+
+.tr-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+.tr-chip {
+  padding: 7px 13px; border-radius: 999px; font-size: 0.85rem; font-weight: 600;
+  background: rgba(255,255,255,0.07); color: #c9b696;
+  border: 1px solid transparent;
+}
+.tr-chip:hover { background: rgba(255,255,255,0.13); }
+.tr-chip.active { background: rgba(207,155,69,0.22); border-color: var(--gold); color: var(--gold-bright); }
+
+/* ---------------- Список задач ---------------- */
+.tr-list { display: flex; flex-direction: column; gap: 10px; }
+
+.tr-task {
+  display: flex; gap: 14px; align-items: flex-start;
+  background: linear-gradient(155deg, #2a1c11, #1c130c);
+  border: 1px solid rgba(207,155,69,0.2);
+  border-left: 5px solid var(--p2);
+  border-radius: 14px; padding: 16px 18px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+}
+.tr-task.p0 { border-left-color: var(--p0); }
+.tr-task.p1 { border-left-color: var(--p1); }
+.tr-task.p2 { border-left-color: var(--p2); }
+.tr-task.p3 { border-left-color: var(--p3); }
+.tr-task.done { opacity: 0.55; }
+.tr-task.done .tr-task-title { text-decoration: line-through; }
+
+.tr-check {
+  flex: none; width: 26px; height: 26px; margin-top: 2px;
+  border-radius: 8px; font-size: 0.9rem; line-height: 1;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(207,155,69,0.35); color: var(--gold-bright);
+}
+.tr-check:hover { background: rgba(207,155,69,0.2); }
+
+.tr-task-main { flex: 1; min-width: 0; }
+.tr-task-title { font-weight: 600; font-size: 1.02rem; line-height: 1.35; word-wrap: break-word; }
+.tr-task-desc {
+  margin: 6px 0 0; color: #c9b696; font-size: 0.9rem; line-height: 1.5;
+  white-space: pre-wrap; word-wrap: break-word;
+}
+.tr-task-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; }
+.tr-badge {
+  font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  padding: 3px 9px; border-radius: 999px;
+  background: rgba(255,255,255,0.07); color: #c9b696;
+}
+.tr-badge.prio { color: #241608; }
+.tr-badge.prio.p0 { background: var(--p0); color: #fff; }
+.tr-badge.prio.p1 { background: var(--p1); }
+.tr-badge.prio.p2 { background: var(--p2); }
+.tr-badge.prio.p3 { background: var(--p3); color: #17100a; }
+.tr-badge.status-progress { background: rgba(207,155,69,0.22); color: var(--gold-bright); }
+.tr-badge.status-done { background: rgba(15,61,46,0.75); color: #9fd6bd; }
+.tr-date { font-size: 0.72rem; color: #8a765a; }
+
+.tr-task-actions { display: flex; flex-direction: column; gap: 6px; flex: none; }
+.tr-icon-btn {
+  width: 32px; height: 32px; border-radius: 9px; font-size: 0.9rem;
+  background: rgba(255,255,255,0.07); color: var(--cream);
+}
+.tr-icon-btn:hover { background: rgba(255,255,255,0.15); }
+.tr-icon-btn.del:hover { background: rgba(192,57,43,0.35); }
+
+.tr-empty { text-align: center; color: #8a765a; padding: 34px 16px; font-size: 0.95rem; }
+
+/* ---------------- Данные ---------------- */
+.tr-data .tr-hint { display: block; margin: 0 0 14px; line-height: 1.5; }
+.tr-data-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+/* ---------------- Тост ---------------- */
+.tr-toast {
+  position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
+  background: linear-gradient(160deg, var(--gold-bright), var(--gold));
+  color: #241608; font-weight: 700; font-size: 0.9rem;
+  padding: 12px 20px; border-radius: 999px;
+  box-shadow: 0 14px 34px rgba(0,0,0,0.5); z-index: 99;
+}
+
+/* ---------------- Мобильные ---------------- */
+@media (max-width: 620px) {
+  .tr-header { padding-top: 26px; }
+  .tr-header h1 { font-size: 1.75rem; }
+  .tr-card { padding: 18px 16px; }
+  .tr-form-row { grid-template-columns: 1fr; }
+  .tr-stats { grid-template-columns: repeat(2, 1fr); }
+  .tr-chips { margin-left: 0; }
+  .tr-task { padding: 14px; gap: 10px; }
+  .tr-task-actions { flex-direction: row; }
+}
