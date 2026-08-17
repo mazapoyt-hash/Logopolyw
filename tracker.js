@@ -1,12 +1,14 @@
 /* ============================================================
-   Трекер задач и багов
+   Трекер задач
    ------------------------------------------------------------
-   Хранилище: localStorage (ключ STORAGE_KEY).
-   Задача: { id, title, desc, priority (0..3), tag, status, created, updated }
-   Статусы: 'new' | 'progress' | 'done'
+   Хранилище: localStorage, ключ STORAGE_KEY.
+   Формат: { version: 2, categories: [{id, name}], tasks: [...] }
+   Задача: { id, title, desc, priority (0..3), cat, status, due, created, updated }
+   Статусы: 'new' | 'progress' | 'hold' | 'done'
    ============================================================ */
 
-const STORAGE_KEY = 'logopoly_tasks_v1';
+const STORAGE_KEY = 'tracker_data_v2';
+const LEGACY_KEY = 'logopoly_tasks_v1';
 
 const PRIORITIES = {
   0: { label: 'Критичный', icon: '🔥' },
@@ -15,66 +17,102 @@ const PRIORITIES = {
   3: { label: 'Низкий',    icon: '⬇️' }
 };
 
-const TAGS = {
-  bug:   'Баг',
-  chat:  'Чат / мессенджер',
-  board: 'Доска / поля',
-  trade: 'Сделки',
-  net:   'Сеть / Firebase',
-  ui:    'Интерфейс',
-  idea:  'Идея / фича'
-};
-
 const STATUSES = {
   new:      { label: 'Новая',    next: 'progress' },
   progress: { label: 'В работе', next: 'done' },
+  hold:     { label: 'Отложена', next: 'progress' },
   done:     { label: 'Готово',   next: 'new' }
 };
 
 /* Порядок статусов при сортировке «по статусу» */
-const STATUS_ORDER = { progress: 0, new: 1, done: 2 };
+const STATUS_ORDER = { progress: 0, new: 1, hold: 2, done: 3 };
 
-let tasks = load();
+const FALLBACK_CAT = 'other';
+
+const DEFAULT_CATEGORIES = [
+  { id: 'bug',   name: 'Баг' },
+  { id: 'feat',  name: 'Фича' },
+  { id: 'imp',   name: 'Улучшение' },
+  { id: 'docs',  name: 'Документация' },
+  { id: 'design', name: 'Дизайн' },
+  { id: FALLBACK_CAT, name: 'Другое' }
+];
+
+/* Разделы старой, «игровой» версии трекера — во что их превращать при переносе */
+const LEGACY_TAG_MAP = {
+  bug: 'bug', idea: 'feat', ui: 'design',
+  chat: FALLBACK_CAT, board: FALLBACK_CAT, trade: FALLBACK_CAT, net: FALLBACK_CAT
+};
+
+let tasks = [];
+let categories = [];
 let editingId = null;
 
-const filters = { search: '', priority: 'all', tag: 'all', status: 'all', sort: 'priority' };
+const filters = { search: '', priority: 'all', cat: 'all', status: 'all', sort: 'priority' };
 
 /* ---------------- Хранилище ---------------- */
 
-function load() {
+function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter(isValidTask).map(normalize) : [];
+    if (raw) {
+      const data = JSON.parse(raw);
+      categories = normalizeCategories(data.categories);
+      tasks = Array.isArray(data.tasks) ? data.tasks.filter(isValidTask).map(normalizeTask) : [];
+      return;
+    }
+    /* Первый запуск: переносим задачи из старой версии, если они были */
+    categories = normalizeCategories(null);
+    const legacy = localStorage.getItem(LEGACY_KEY);
+    tasks = legacy ? migrateLegacy(JSON.parse(legacy)) : [];
+    if (tasks.length) saveState();
   } catch (e) {
-    console.warn('Не удалось прочитать сохранённые задачи:', e);
-    return [];
+    console.warn('Не удалось прочитать сохранённые данные:', e);
+    categories = normalizeCategories(null);
+    tasks = [];
   }
 }
 
-function save() {
+function saveState() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, categories, tasks }));
   } catch (e) {
     toast('Не удалось сохранить — хранилище браузера недоступно');
   }
+}
+
+function migrateLegacy(list) {
+  if (!Array.isArray(list)) return [];
+  return list.filter(isValidTask).map(t => normalizeTask({ ...t, cat: LEGACY_TAG_MAP[t.tag] || FALLBACK_CAT }));
+}
+
+function normalizeCategories(list) {
+  const clean = Array.isArray(list)
+    ? list.filter(c => c && typeof c.name === 'string' && c.name.trim())
+          .map(c => ({ id: String(c.id || slug(c.name)), name: c.name.trim().slice(0, 24) }))
+    : [];
+  if (!clean.length) return DEFAULT_CATEGORIES.map(c => ({ ...c }));
+  /* «Другое» обязателен — в него переезжают задачи удалённых разделов */
+  if (!clean.some(c => c.id === FALLBACK_CAT)) clean.push({ id: FALLBACK_CAT, name: 'Другое' });
+  return clean;
 }
 
 function isValidTask(t) {
   return t && typeof t === 'object' && typeof t.title === 'string' && t.title.trim() !== '';
 }
 
-/* Приводим задачу к актуальной форме — чтобы старые/чужие файлы не ломали список */
-function normalize(t) {
+/* Приводим задачу к актуальной форме — чтобы старые и чужие файлы не ломали список */
+function normalizeTask(t) {
   const priority = Number(t.priority);
+  const cat = String(t.cat || '');
   return {
     id: String(t.id || newId()),
-    title: String(t.title).slice(0, 120),
+    title: String(t.title).trim().slice(0, 120),
     desc: typeof t.desc === 'string' ? t.desc.slice(0, 2000) : '',
     priority: PRIORITIES[priority] ? priority : 2,
-    tag: TAGS[t.tag] ? t.tag : 'bug',
+    cat: categories.some(c => c.id === cat) ? cat : FALLBACK_CAT,
     status: STATUSES[t.status] ? t.status : 'new',
+    due: /^\d{4}-\d{2}-\d{2}$/.test(t.due) ? t.due : '',
     created: Number(t.created) || Date.now(),
     updated: Number(t.updated) || Number(t.created) || Date.now()
   };
@@ -84,15 +122,24 @@ function newId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
-/* ---------------- Создание / изменение ---------------- */
+function slug(name) {
+  return 'c' + Math.abs([...name].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) | 0, 7)).toString(36);
+}
+
+function catName(id) {
+  const cat = categories.find(c => c.id === id);
+  return cat ? cat.name : 'Другое';
+}
+
+/* ---------------- Создание / изменение задач ---------------- */
 
 const form = document.getElementById('task-form');
-const fieldId = document.getElementById('field-id');
 const fieldTitle = document.getElementById('field-title');
 const fieldDesc = document.getElementById('field-desc');
 const fieldPriority = document.getElementById('field-priority');
-const fieldTag = document.getElementById('field-tag');
+const fieldCat = document.getElementById('field-cat');
 const fieldStatus = document.getElementById('field-status');
+const fieldDue = document.getElementById('field-due');
 const btnSubmit = document.getElementById('btn-submit');
 const btnCancelEdit = document.getElementById('btn-cancel-edit');
 
@@ -105,43 +152,50 @@ form.addEventListener('submit', e => {
     title,
     desc: fieldDesc.value.trim(),
     priority: Number(fieldPriority.value),
-    tag: fieldTag.value,
-    status: fieldStatus.value
+    cat: fieldCat.value,
+    status: fieldStatus.value,
+    due: fieldDue.value
   };
 
   if (editingId) {
     const task = tasks.find(t => t.id === editingId);
     if (task) {
-      Object.assign(task, data, { updated: Date.now() });
+      Object.assign(task, normalizeTask({ ...task, ...data }), { updated: Date.now() });
       toast('Задача обновлена');
     }
     stopEditing();
   } else {
-    tasks.unshift(normalize({ ...data, id: newId(), created: Date.now(), updated: Date.now() }));
+    tasks.unshift(normalizeTask({ ...data, id: newId(), created: Date.now(), updated: Date.now() }));
     toast('Задача добавлена');
-    form.reset();
-    fieldPriority.value = '2';
-    fieldStatus.value = 'new';
+    resetForm();
   }
 
-  save();
+  saveState();
   render();
   fieldTitle.focus();
 });
 
 btnCancelEdit.addEventListener('click', stopEditing);
 
+function resetForm() {
+  form.reset();
+  fieldPriority.value = '2';
+  fieldStatus.value = 'new';
+  fieldDue.value = '';
+  if (categories.length) fieldCat.value = categories[0].id;
+}
+
 function startEditing(id) {
   const task = tasks.find(t => t.id === id);
   if (!task) return;
 
   editingId = id;
-  fieldId.value = id;
   fieldTitle.value = task.title;
   fieldDesc.value = task.desc;
   fieldPriority.value = String(task.priority);
-  fieldTag.value = task.tag;
+  fieldCat.value = task.cat;
   fieldStatus.value = task.status;
+  fieldDue.value = task.due;
 
   btnSubmit.textContent = 'Сохранить изменения';
   btnCancelEdit.classList.remove('hidden');
@@ -151,10 +205,7 @@ function startEditing(id) {
 
 function stopEditing() {
   editingId = null;
-  form.reset();
-  fieldId.value = '';
-  fieldPriority.value = '2';
-  fieldStatus.value = 'new';
+  resetForm();
   btnSubmit.textContent = 'Добавить задачу';
   btnCancelEdit.classList.add('hidden');
 }
@@ -164,7 +215,7 @@ function cycleStatus(id) {
   if (!task) return;
   task.status = STATUSES[task.status].next;
   task.updated = Date.now();
-  save();
+  saveState();
   render();
 }
 
@@ -175,7 +226,7 @@ function changePriority(id, delta) {
   if (!PRIORITIES[next]) return;
   task.priority = next;
   task.updated = Date.now();
-  save();
+  saveState();
   render();
 }
 
@@ -185,51 +236,115 @@ function removeTask(id) {
   if (!confirm(`Удалить задачу «${task.title}»?`)) return;
   tasks = tasks.filter(t => t.id !== id);
   if (editingId === id) stopEditing();
-  save();
+  saveState();
   render();
   toast('Задача удалена');
+}
+
+/* ---------------- Разделы ---------------- */
+
+const catForm = document.getElementById('cat-form');
+const catInput = document.getElementById('cat-input');
+const catManager = document.getElementById('cat-manager');
+
+catForm.addEventListener('submit', e => {
+  e.preventDefault();
+  const name = catInput.value.trim().slice(0, 24);
+  if (!name) return;
+  if (categories.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+    toast('Такой раздел уже есть');
+    return;
+  }
+  let id = slug(name);
+  while (categories.some(c => c.id === id)) id += 'x';
+  categories.push({ id, name });
+  catInput.value = '';
+  saveState();
+  render();
+  toast(`Раздел «${name}» добавлен`);
+});
+
+catManager.addEventListener('click', e => {
+  const btn = e.target.closest('[data-cat]');
+  if (!btn) return;
+  removeCategory(btn.dataset.cat);
+});
+
+function removeCategory(id) {
+  if (id === FALLBACK_CAT) return;
+  const cat = categories.find(c => c.id === id);
+  if (!cat) return;
+
+  const used = tasks.filter(t => t.cat === id).length;
+  const question = used
+    ? `Удалить раздел «${cat.name}»? Задач в нём: ${used} — они переедут в «Другое».`
+    : `Удалить раздел «${cat.name}»?`;
+  if (!confirm(question)) return;
+
+  categories = categories.filter(c => c.id !== id);
+  tasks.forEach(t => { if (t.cat === id) t.cat = FALLBACK_CAT; });
+  saveState();
+  render();
+  toast('Раздел удалён');
+}
+
+function renderCategories() {
+  catManager.innerHTML = categories.map(c => {
+    const used = tasks.filter(t => t.cat === c.id).length;
+    const remove = c.id === FALLBACK_CAT
+      ? ''
+      : `<button type="button" class="tr-cat-del" data-cat="${c.id}" title="Удалить раздел">✕</button>`;
+    return `<span class="tr-cat-tag">${esc(c.name)}<i>${used}</i>${remove}</span>`;
+  }).join('');
+
+  fillSelect(fieldCat, categories.map(c => [c.id, c.name]), categories[0].id);
+  fillSelect(document.getElementById('filter-cat'),
+    [['all', 'Все'], ...categories.map(c => [c.id, c.name])], filters.cat);
+}
+
+/* Перерисовывает <select>, сохраняя выбранное значение, если оно ещё существует */
+function fillSelect(select, pairs, fallback) {
+  const previous = select.value;
+  select.innerHTML = pairs.map(([value, label]) =>
+    `<option value="${value}">${esc(label)}</option>`).join('');
+  select.value = pairs.some(([value]) => value === previous) ? previous : fallback;
 }
 
 /* ---------------- Фильтры ---------------- */
 
 document.getElementById('filter-search').addEventListener('input', e => {
   filters.search = e.target.value.trim().toLowerCase();
-  render();
+  renderList();
 });
 document.getElementById('sort-mode').addEventListener('change', e => {
   filters.sort = e.target.value;
-  render();
+  renderList();
 });
 document.getElementById('filter-priority').addEventListener('change', e => {
   filters.priority = e.target.value;
-  render();
+  renderList();
 });
-document.getElementById('filter-tag').addEventListener('change', e => {
-  filters.tag = e.target.value;
-  render();
+document.getElementById('filter-cat').addEventListener('change', e => {
+  filters.cat = e.target.value;
+  renderList();
 });
 document.getElementById('status-chips').addEventListener('click', e => {
   const chip = e.target.closest('.tr-chip');
   if (!chip) return;
   filters.status = chip.dataset.status;
   document.querySelectorAll('#status-chips .tr-chip').forEach(c => c.classList.toggle('active', c === chip));
-  render();
+  renderList();
 });
 
 function visibleTasks() {
-  const list = tasks.filter(t => {
+  return tasks.filter(t => {
     if (filters.priority !== 'all' && t.priority !== Number(filters.priority)) return false;
-    if (filters.tag !== 'all' && t.tag !== filters.tag) return false;
+    if (filters.cat !== 'all' && t.cat !== filters.cat) return false;
     if (filters.status === 'open' && t.status === 'done') return false;
     if (filters.status !== 'all' && filters.status !== 'open' && t.status !== filters.status) return false;
-    if (filters.search) {
-      const haystack = (t.title + ' ' + t.desc).toLowerCase();
-      if (!haystack.includes(filters.search)) return false;
-    }
+    if (filters.search && !(t.title + ' ' + t.desc).toLowerCase().includes(filters.search)) return false;
     return true;
-  });
-
-  return list.sort(comparator);
+  }).sort(comparator);
 }
 
 function comparator(a, b) {
@@ -241,6 +356,11 @@ function comparator(a, b) {
   switch (filters.sort) {
     case 'created-desc': return b.created - a.created;
     case 'created-asc':  return a.created - b.created;
+    case 'due':
+      /* Задачи без срока — в конец */
+      if (!a.due !== !b.due) return a.due ? -1 : 1;
+      if (a.due !== b.due) return a.due < b.due ? -1 : 1;
+      return a.priority - b.priority;
     case 'status':
       if (STATUS_ORDER[a.status] !== STATUS_ORDER[b.status]) {
         return STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
@@ -252,12 +372,57 @@ function comparator(a, b) {
   }
 }
 
+/* ---------------- Сроки ---------------- */
+
+function today() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+/* Сколько дней осталось до срока: 0 — сегодня, отрицательное — просрочено */
+function daysLeft(due) {
+  const [y, m, d] = due.split('-').map(Number);
+  return Math.round((new Date(y, m - 1, d) - today()) / 86400000);
+}
+
+function dueBadge(task) {
+  if (!task.due) return '';
+  const left = daysLeft(task.due);
+  const date = formatDue(task.due);
+
+  if (task.status === 'done') return `<span class="tr-badge due">срок ${date}</span>`;
+  if (left < 0) return `<span class="tr-badge due overdue">просрочено на ${plural(-left)}</span>`;
+  if (left === 0) return `<span class="tr-badge due soon">срок сегодня</span>`;
+  if (left === 1) return `<span class="tr-badge due soon">срок завтра</span>`;
+  return `<span class="tr-badge due">до ${date}</span>`;
+}
+
+function plural(days) {
+  const n = days % 100;
+  const last = n % 10;
+  if (n > 10 && n < 20) return days + ' дней';
+  if (last === 1) return days + ' день';
+  if (last >= 2 && last <= 4) return days + ' дня';
+  return days + ' дней';
+}
+
+function formatDue(due) {
+  const [y, m, d] = due.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+}
+
+function isOverdue(task) {
+  return task.due && task.status !== 'done' && daysLeft(task.due) < 0;
+}
+
 /* ---------------- Отрисовка ---------------- */
 
 const listEl = document.getElementById('task-list');
 const statsEl = document.getElementById('stats');
 
 function render() {
+  renderCategories();
   renderStats();
   renderList();
 }
@@ -268,7 +433,8 @@ function renderStats() {
     { value: tasks.length, label: 'Всего' },
     { value: open.length, label: 'Открытых' },
     { value: tasks.filter(t => t.status === 'progress').length, label: 'В работе' },
-    { value: open.filter(t => t.priority === 0).length, label: 'Критичных', alert: true }
+    { value: open.filter(t => t.priority === 0).length, label: 'Критичных', alert: true },
+    { value: tasks.filter(isOverdue).length, label: 'Просрочено', alert: true }
   ];
 
   statsEl.innerHTML = stats.map(s =>
@@ -282,7 +448,7 @@ function renderList() {
   if (!list.length) {
     listEl.innerHTML = `<div class="tr-card tr-empty">${tasks.length
       ? 'Под фильтры ничего не подошло.'
-      : 'Пока пусто. Добавьте первый баг — например, тот, что нашли в чате.'}</div>`;
+      : 'Пока пусто. Добавьте первую задачу — форма выше.'}</div>`;
     return;
   }
 
@@ -294,21 +460,21 @@ function taskHtml(t) {
   const statusBadge = t.status === 'new'
     ? ''
     : `<span class="tr-badge status-${t.status}">${STATUSES[t.status].label}</span>`;
+  const mark = { done: '✔', progress: '◐', hold: '⏸' }[t.status] || '';
 
   return `
-  <article class="tr-task p${t.priority}${t.status === 'done' ? ' done' : ''}">
+  <article class="tr-task p${t.priority}${t.status === 'done' ? ' done' : ''}${isOverdue(t) ? ' overdue' : ''}">
     <button class="tr-check" data-act="cycle" data-id="${t.id}"
-            title="Статус: ${STATUSES[t.status].label} → ${STATUSES[STATUSES[t.status].next].label}">
-      ${t.status === 'done' ? '✔' : t.status === 'progress' ? '◐' : ''}
-    </button>
+            title="Статус: ${STATUSES[t.status].label} → ${STATUSES[STATUSES[t.status].next].label}">${mark}</button>
 
     <div class="tr-task-main">
       <div class="tr-task-title">${esc(t.title)}</div>
       ${t.desc ? `<p class="tr-task-desc">${esc(t.desc)}</p>` : ''}
       <div class="tr-task-meta">
         <span class="tr-badge prio p${t.priority}">${prio.icon} ${prio.label}</span>
-        <span class="tr-badge">${TAGS[t.tag]}</span>
+        <span class="tr-badge">${esc(catName(t.cat))}</span>
         ${statusBadge}
+        ${dueBadge(t)}
         <span class="tr-date">создано ${formatDate(t.created)}</span>
       </div>
     </div>
@@ -352,11 +518,12 @@ function esc(str) {
 /* ---------------- Экспорт / импорт ---------------- */
 
 document.getElementById('btn-export').addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify(tasks, null, 2)], { type: 'application/json' });
+  const payload = JSON.stringify({ version: 2, categories, tasks }, null, 2);
+  const blob = new Blob([payload], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `logopoly-tasks-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = `tasks-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   URL.revokeObjectURL(url);
 });
@@ -371,8 +538,19 @@ importFile.addEventListener('change', () => {
   reader.onload = () => {
     try {
       const parsed = JSON.parse(reader.result);
-      if (!Array.isArray(parsed)) throw new Error('ожидался массив задач');
-      const incoming = parsed.filter(isValidTask).map(normalize);
+      /* Принимаем и новый формат с разделами, и старый — простой массив задач */
+      const rawTasks = Array.isArray(parsed) ? parsed : parsed && parsed.tasks;
+      if (!Array.isArray(rawTasks)) throw new Error('в файле нет списка задач');
+
+      if (parsed && Array.isArray(parsed.categories)) {
+        const known = new Set(categories.map(c => c.id));
+        normalizeCategories(parsed.categories).forEach(c => {
+          if (!known.has(c.id)) { categories.push(c); known.add(c.id); }
+        });
+      }
+
+      const incoming = rawTasks.filter(isValidTask)
+        .map(t => normalizeTask(Array.isArray(parsed) ? { ...t, cat: LEGACY_TAG_MAP[t.tag] || t.cat } : t));
       if (!incoming.length) { toast('В файле нет задач'); return; }
 
       /* Задачи с уже известным id обновляем, остальные добавляем */
@@ -380,7 +558,7 @@ importFile.addEventListener('change', () => {
       incoming.forEach(t => byId.set(t.id, t));
       tasks = [...byId.values()];
 
-      save();
+      saveState();
       render();
       toast(`Загружено задач: ${incoming.length}`);
     } catch (err) {
@@ -398,7 +576,8 @@ document.getElementById('btn-copy-md').addEventListener('click', async () => {
 
   const text = list.map(t => {
     const box = t.status === 'done' ? '[x]' : '[ ]';
-    const head = `- ${box} ${PRIORITIES[t.priority].icon} ${PRIORITIES[t.priority].label} · ${TAGS[t.tag]} — ${t.title}`;
+    const due = t.due ? ` · до ${formatDue(t.due)}` : '';
+    const head = `- ${box} ${PRIORITIES[t.priority].icon} ${PRIORITIES[t.priority].label} · ${catName(t.cat)}${due} — ${t.title}`;
     return t.desc ? head + '\n' + t.desc.split('\n').map(l => '      ' + l).join('\n') : head;
   }).join('\n');
 
@@ -416,7 +595,7 @@ document.getElementById('btn-clear-done').addEventListener('click', () => {
   if (!done.length) { toast('Готовых задач нет'); return; }
   if (!confirm(`Удалить готовые задачи (${done.length})?`)) return;
   tasks = tasks.filter(t => t.status !== 'done');
-  save();
+  saveState();
   render();
   toast('Готовые задачи удалены');
 });
@@ -435,4 +614,6 @@ function toast(message) {
 
 /* ---------------- Старт ---------------- */
 
+loadState();
 render();
+resetForm();

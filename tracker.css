@@ -71,6 +71,7 @@ input, select, textarea { font-family: inherit; }
 .tr-hint { text-transform: none; letter-spacing: 0; color: #8a765a; font-size: 0.85em; }
 
 .tr-form input[type=text],
+.tr-form input[type=date],
 .tr-form textarea,
 .tr-form select,
 .tr-search {
@@ -85,7 +86,10 @@ input, select, textarea { font-family: inherit; }
 }
 .tr-form select option { background: #2a1c11; color: var(--cream); }
 
-.tr-form-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.tr-form-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.tr-form-row label { margin-top: 0; }
+/* Календарная иконка в input[type=date] по умолчанию тёмная — на тёмном фоне не видна */
+.tr-form input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.8) sepia(0.4); cursor: pointer; }
 .tr-form-actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
 
 .action-btn {
@@ -104,7 +108,7 @@ input, select, textarea { font-family: inherit; }
 .action-btn.danger:hover { background: rgba(192,57,43,0.28); }
 
 /* ---------------- Статистика ---------------- */
-.tr-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.tr-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; }
 .tr-stat {
   background: rgba(0,0,0,0.28);
   border: 1px solid rgba(207,155,69,0.18);
@@ -157,6 +161,7 @@ input, select, textarea { font-family: inherit; }
 .tr-task.p3 { border-left-color: var(--p3); }
 .tr-task.done { opacity: 0.55; }
 .tr-task.done .tr-task-title { text-decoration: line-through; }
+.tr-task.overdue { border-color: rgba(224,82,63,0.55); }
 
 .tr-check {
   flex: none; width: 26px; height: 26px; margin-top: 2px;
@@ -184,10 +189,14 @@ input, select, textarea { font-family: inherit; }
 .tr-badge.prio.p2 { background: var(--p2); }
 .tr-badge.prio.p3 { background: var(--p3); color: #17100a; }
 .tr-badge.status-progress { background: rgba(207,155,69,0.22); color: var(--gold-bright); }
+.tr-badge.status-hold { background: rgba(255,255,255,0.1); color: #bfae92; }
 .tr-badge.status-done { background: rgba(15,61,46,0.75); color: #9fd6bd; }
+.tr-badge.due { background: rgba(255,255,255,0.07); color: #c9b696; }
+.tr-badge.due.soon { background: rgba(224,139,47,0.25); color: #f0c675; }
+.tr-badge.due.overdue { background: var(--p0); color: #fff; }
 .tr-date { font-size: 0.72rem; color: #8a765a; }
 
-.tr-task-actions { display: flex; flex-direction: column; gap: 6px; flex: none; }
+.tr-task-actions { display: grid; grid-template-columns: repeat(2, 32px); gap: 6px; flex: none; }
 .tr-icon-btn {
   width: 32px; height: 32px; border-radius: 9px; font-size: 0.9rem;
   background: rgba(255,255,255,0.07); color: var(--cream);
@@ -197,8 +206,39 @@ input, select, textarea { font-family: inherit; }
 
 .tr-empty { text-align: center; color: #8a765a; padding: 34px 16px; font-size: 0.95rem; }
 
+/* ---------------- Разделы ---------------- */
+.tr-block-hint { display: block; margin: 0 0 14px; line-height: 1.5; }
+
+.tr-cat-manager { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.tr-cat-tag {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 10px 7px 13px; border-radius: 999px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(207,155,69,0.2);
+  font-size: 0.88rem; color: var(--cream);
+}
+.tr-cat-tag i {
+  font-style: normal; font-size: 0.75rem; font-weight: 700;
+  color: #8a765a; min-width: 14px; text-align: center;
+}
+.tr-cat-del {
+  width: 20px; height: 20px; border-radius: 50%; line-height: 1; font-size: 0.7rem;
+  background: rgba(255,255,255,0.08); color: #c9b696;
+}
+.tr-cat-del:hover { background: rgba(192,57,43,0.45); color: #fff; }
+
+.tr-cat-form { display: flex; gap: 10px; }
+.tr-cat-form input {
+  flex: 1; min-width: 0; padding: 11px 13px; border-radius: 10px;
+  border: 1px solid rgba(207,155,69,0.3);
+  background: rgba(0,0,0,0.25); color: var(--cream); font-size: 0.95rem;
+}
+.tr-cat-form input:focus {
+  outline: none; border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(207,155,69,0.15);
+}
+
 /* ---------------- Данные ---------------- */
-.tr-data .tr-hint { display: block; margin: 0 0 14px; line-height: 1.5; }
 .tr-data-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 
 /* ---------------- Тост ---------------- */
@@ -217,7 +257,7 @@ input, select, textarea { font-family: inherit; }
   .tr-card { padding: 18px 16px; }
   .tr-form-row { grid-template-columns: 1fr; }
   .tr-stats { grid-template-columns: repeat(2, 1fr); }
+  .tr-stat b { font-size: 1.45rem; }
   .tr-chips { margin-left: 0; }
   .tr-task { padding: 14px; gap: 10px; }
-  .tr-task-actions { flex-direction: row; }
 }
