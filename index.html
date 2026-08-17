@@ -3,199 +3,141 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Монополия онлайн</title>
+<title>Трекер задач</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="tracker.css">
 </head>
 <body>
 
-<svg class="skyline-svg" viewBox="0 0 1200 300" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="980" cy="60" r="46" fill="#ffd9a0" opacity="0.55"/>
-  <g fill="#140d08" opacity="0.9">
-    <rect x="0"   y="150" width="60"  height="150"/>
-    <rect x="65"  y="110" width="40"  height="190"/>
-    <rect x="110" y="170" width="70"  height="130"/>
-    <rect x="185" y="90"  width="50"  height="210"/>
-    <rect x="240" y="140" width="55"  height="160"/>
-    <rect x="300" y="60"  width="45"  height="240"/>
-    <rect x="350" y="130" width="65"  height="170"/>
-    <rect x="420" y="95"  width="40"  height="205"/>
-    <rect x="465" y="160" width="80"  height="140"/>
-    <rect x="550" y="70"  width="50"  height="230"/>
-    <rect x="605" y="120" width="60"  height="180"/>
-    <rect x="670" y="45"  width="42"  height="255"/>
-    <rect x="718" y="150" width="70"  height="150"/>
-    <rect x="795" y="100" width="46"  height="200"/>
-    <rect x="846" y="165" width="60"  height="135"/>
-    <rect x="912" y="80"  width="48"  height="220"/>
-    <rect x="965" y="140" width="65"  height="160"/>
-    <rect x="1035" y="105" width="42" height="195"/>
-    <rect x="1082" y="155" width="58" height="145"/>
-    <rect x="1145" y="90"  width="55" height="210"/>
-  </g>
-  <g fill="#ffd9a0" opacity="0.5">
-    <rect x="20" y="175" width="6" height="8"/><rect x="35" y="200" width="6" height="8"/>
-    <rect x="80" y="140" width="6" height="8"/><rect x="80" y="170" width="6" height="8"/>
-    <rect x="200" y="120" width="6" height="8"/><rect x="215" y="160" width="6" height="8"/>
-    <rect x="315" y="90" width="6" height="8"/><rect x="315" y="140" width="6" height="8"/>
-    <rect x="480" y="190" width="6" height="8"/><rect x="500" y="210" width="6" height="8"/>
-    <rect x="620" y="150" width="6" height="8"/><rect x="640" y="190" width="6" height="8"/>
-    <rect x="735" y="180" width="6" height="8"/><rect x="755" y="210" width="6" height="8"/>
-    <rect x="925" y="110" width="6" height="8"/><rect x="940" y="150" width="6" height="8"/>
-    <rect x="1055" y="135" width="6" height="8"/><rect x="1095" y="180" width="6" height="8"/>
-  </g>
-</svg>
+<header class="tr-header">
+  <h1>🐞 Трекер <span>задач</span></h1>
+  <p class="tr-subtitle">Баги, идеи и доработки — вместо переписки в мессенджере</p>
+</header>
 
-<div id="config-warning" class="config-warning hidden">
-  ⚠️ Firebase не настроен. Откройте <code>firebase-config.js</code> и вставьте туда конфигурацию
-  вашего проекта Firebase (см. README.md), иначе игра по сети работать не будет.
-</div>
+<main class="tr-main">
 
-<!-- LOBBY -->
-<section id="screen-lobby" class="screen">
-  <div class="lobby-card">
-    <h1>🎩 Монополия <span>онлайн</span></h1>
-    <p class="subtitle">Играйте с друзьями по сети — создайте комнату и отправьте им код</p>
+  <!-- ---------------- Форма создания / редактирования ---------------- -->
+  <section class="tr-card">
+    <form id="task-form" class="tr-form" autocomplete="off">
+      <input type="hidden" id="field-id">
 
-    <label>Ваше имя</label>
-    <input id="input-name" type="text" maxlength="16" placeholder="Например, Эмма">
+      <label for="field-title">Что нужно сделать / что сломалось</label>
+      <input id="field-title" type="text" maxlength="120" placeholder="Например: чат не прокручивается вниз при новом сообщении" required>
 
-    <label>Фишка</label>
-    <div id="token-picker" class="picker-row"></div>
+      <label for="field-desc">Подробности <span class="tr-hint">(шаги воспроизведения, ссылки — необязательно)</span></label>
+      <textarea id="field-desc" rows="3" maxlength="2000" placeholder="1. Открыть чат&#10;2. Написать 10 сообщений&#10;3. Список не доезжает до последнего"></textarea>
 
-    <label>Цвет</label>
-    <div id="color-picker" class="picker-row"></div>
-
-    <div class="lobby-actions">
-      <button class="action-btn primary" onclick="createRoom()">Создать комнату</button>
-      <div class="divider">или</div>
-      <input id="input-code" type="text" maxlength="5" placeholder="КОД КОМНАТЫ" class="code-input">
-      <button class="action-btn" onclick="joinRoom()">Присоединиться</button>
-    </div>
-  </div>
-</section>
-
-<!-- WAITING ROOM -->
-<section id="screen-waiting" class="screen hidden">
-  <div class="lobby-card">
-    <h2>Комната создана!</h2>
-    <p>Код комнаты — отправьте его друзьям:</p>
-    <div class="room-code-box" id="room-code-display">-----</div>
-    <h3>Игроки в комнате:</h3>
-    <ul id="waiting-players" class="waiting-list"></ul>
-    <button id="btn-start-game" class="action-btn primary hidden" onclick="startGame()">Начать игру</button>
-    <button class="action-btn" onclick="leaveRoom()">Выйти</button>
-  </div>
-</section>
-
-<!-- GAME -->
-<section id="screen-game" class="screen hidden">
-  <div class="game-topline">
-    <button class="icon-btn" onclick="toggleMenu()">☰</button>
-    <div id="top-bar" class="top-bar"></div>
-    <button class="icon-btn chat-btn" onclick="toggleChat()">💬<span id="chat-badge" class="chat-badge hidden">•</span></button>
-  </div>
-
-  <div id="game-menu" class="game-menu hidden">
-    <button class="action-btn" onclick="toggleMenu();openRulesInfo();">📜 Правила / упрощения</button>
-    <button class="action-btn" onclick="toggleMenu();confirmLeave();">🚪 Покинуть игру</button>
-  </div>
-
-  <div id="event-layer" class="event-layer"></div>
-
-  <div id="board-wrap" class="board-wrap">
-    <div id="board-grid" class="board-grid"></div>
-  </div>
-
-  <div id="trade-incoming" class="trade-incoming hidden"></div>
-
-  <div class="bottom-bar">
-    <div id="static-actions" class="static-actions">
-      <button class="icon-action" id="btn-trade" onclick="openTradeModal()"><span class="icon-circle">🤝</span><span>Сделка</span></button>
-      <span id="turn-actions" style="display:contents">
-        <button class="icon-action" onclick="openBuildModal()"><span class="icon-circle">🏠</span><span>Строить</span></button>
-        <button class="icon-action" onclick="openSellModal()"><span class="icon-circle">💵</span><span>Продать</span></button>
-        <button class="icon-action" onclick="openMortgageModal()"><span class="icon-circle">🏦</span><span>Залог</span></button>
-        <button class="icon-action" onclick="openRedeemModal()"><span class="icon-circle">↩️</span><span>Выкуп</span></button>
-      </span>
-    </div>
-    <div id="action-bar" class="action-bar"></div>
-  </div>
-</section>
-
-<!-- CHAT DRAWER -->
-<div id="chat-drawer" class="chat-drawer hidden">
-  <div class="chat-header">
-    <span>Чат комнаты</span>
-    <button class="modal-close" onclick="toggleChat()">✕</button>
-  </div>
-  <div id="chat-messages" class="chat-messages"></div>
-  <form id="chat-form" class="chat-form" onsubmit="event.preventDefault(); submitChat();">
-    <input id="chat-input" type="text" maxlength="300" placeholder="Написать в чат…" autocomplete="off">
-    <button class="action-btn primary" type="submit">➤</button>
-  </form>
-</div>
-
-<!-- GENERIC LIST MODAL (Build / Sell / Mortgage / Redeem) -->
-<div id="list-modal" class="modal hidden">
-  <div class="modal-box">
-    <button class="modal-close" onclick="document.getElementById('list-modal').classList.add('hidden')">✕</button>
-    <h3 id="list-modal-title"></h3>
-    <div id="list-modal-body" class="list-modal-body"></div>
-  </div>
-</div>
-
-<!-- TILE INFO MODAL -->
-<div id="tile-modal" class="modal hidden">
-  <div class="modal-box">
-    <button class="modal-close" onclick="closeModal()">✕</button>
-    <div id="tile-modal-body"></div>
-  </div>
-</div>
-
-<!-- TRADE MODAL -->
-<div id="trade-modal" class="modal hidden">
-  <div class="modal-box">
-    <button class="modal-close" onclick="document.getElementById('trade-modal').classList.add('hidden')">✕</button>
-    <h3>Предложить сделку</h3>
-    <label>Кому предложить</label>
-    <select id="trade-target" onchange="renderTradeProps()"></select>
-
-    <div class="trade-columns">
-      <div>
-        <h4>Вы отдаёте</h4>
-        <label>Деньги: ₽<input id="trade-offer-money" type="number" value="0" min="0"></label>
-        <div id="trade-my-props" class="prop-checklist"></div>
+      <div class="tr-form-row">
+        <div>
+          <label for="field-priority">Приоритет</label>
+          <select id="field-priority">
+            <option value="0">🔥 Критичный — ломает игру</option>
+            <option value="1">⬆️ Высокий</option>
+            <option value="2" selected>➖ Средний</option>
+            <option value="3">⬇️ Низкий — когда-нибудь</option>
+          </select>
+        </div>
+        <div>
+          <label for="field-tag">Раздел</label>
+          <select id="field-tag">
+            <option value="bug" selected>Баг</option>
+            <option value="chat">Чат / мессенджер</option>
+            <option value="board">Доска / поля</option>
+            <option value="trade">Сделки</option>
+            <option value="net">Сеть / Firebase</option>
+            <option value="ui">Интерфейс</option>
+            <option value="idea">Идея / фича</option>
+          </select>
+        </div>
+        <div>
+          <label for="field-status">Статус</label>
+          <select id="field-status">
+            <option value="new" selected>Новая</option>
+            <option value="progress">В работе</option>
+            <option value="done">Готово</option>
+          </select>
+        </div>
       </div>
-      <div>
-        <h4>Вы просите</h4>
-        <label>Деньги: ₽<input id="trade-request-money" type="number" value="0" min="0"></label>
-        <div id="trade-their-props" class="prop-checklist"></div>
+
+      <div class="tr-form-actions">
+        <button type="submit" class="action-btn primary" id="btn-submit">Добавить задачу</button>
+        <button type="button" class="action-btn hidden" id="btn-cancel-edit">Отменить правку</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ---------------- Статистика ---------------- -->
+  <section id="stats" class="tr-stats"></section>
+
+  <!-- ---------------- Фильтры и сортировка ---------------- -->
+  <section class="tr-card tr-toolbar">
+    <input id="filter-search" type="search" placeholder="🔍 Поиск по названию и описанию" class="tr-search">
+
+    <div class="tr-toolbar-row">
+      <label class="tr-inline">Сортировка
+        <select id="sort-mode">
+          <option value="priority" selected>По приоритету</option>
+          <option value="created-desc">Сначала новые</option>
+          <option value="created-asc">Сначала старые</option>
+          <option value="status">По статусу</option>
+        </select>
+      </label>
+
+      <label class="tr-inline">Приоритет
+        <select id="filter-priority">
+          <option value="all" selected>Любой</option>
+          <option value="0">Критичный</option>
+          <option value="1">Высокий</option>
+          <option value="2">Средний</option>
+          <option value="3">Низкий</option>
+        </select>
+      </label>
+
+      <label class="tr-inline">Раздел
+        <select id="filter-tag">
+          <option value="all" selected>Все</option>
+          <option value="bug">Баг</option>
+          <option value="chat">Чат / мессенджер</option>
+          <option value="board">Доска / поля</option>
+          <option value="trade">Сделки</option>
+          <option value="net">Сеть / Firebase</option>
+          <option value="ui">Интерфейс</option>
+          <option value="idea">Идея / фича</option>
+        </select>
+      </label>
+
+      <div class="tr-chips" id="status-chips">
+        <button type="button" class="tr-chip active" data-status="all">Все</button>
+        <button type="button" class="tr-chip" data-status="open">Открытые</button>
+        <button type="button" class="tr-chip" data-status="new">Новые</button>
+        <button type="button" class="tr-chip" data-status="progress">В работе</button>
+        <button type="button" class="tr-chip" data-status="done">Готовые</button>
       </div>
     </div>
-    <button class="action-btn primary" onclick="submitTrade()">Отправить предложение</button>
-  </div>
-</div>
+  </section>
 
-<!-- WINNER MODAL -->
-<div id="winner-modal" class="modal hidden">
-  <div class="modal-box center">
-    <p id="winner-text" style="font-size:1.4em"></p>
-    <button class="action-btn primary" onclick="location.reload()">Новая игра</button>
-  </div>
-</div>
+  <!-- ---------------- Список ---------------- -->
+  <section id="task-list" class="tr-list"></section>
 
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
-<script src="firebase-config.js"></script>
-<script src="board-data.js"></script>
-<script src="app.js"></script>
-<script src="render.js"></script>
-<script>
-  renderPickers();
-  document.getElementById('input-name').value = myName;
-  initFirebase();
-</script>
+  <!-- ---------------- Данные ---------------- -->
+  <section class="tr-card tr-data">
+    <h3>Данные</h3>
+    <p class="tr-hint">Задачи хранятся в этом браузере (localStorage). Чтобы перенести на другое
+      устройство или сохранить резервную копию — выгрузите файл.</p>
+    <div class="tr-data-actions">
+      <button type="button" class="action-btn" id="btn-export">⬇️ Выгрузить JSON</button>
+      <button type="button" class="action-btn" id="btn-import">⬆️ Загрузить JSON</button>
+      <button type="button" class="action-btn" id="btn-copy-md">📋 Скопировать списком</button>
+      <button type="button" class="action-btn danger" id="btn-clear-done">🧹 Удалить готовые</button>
+      <input type="file" id="import-file" accept="application/json,.json" class="hidden">
+    </div>
+  </section>
+
+</main>
+
+<div id="toast" class="tr-toast hidden"></div>
+
+<script src="tracker.js"></script>
 </body>
 </html>
