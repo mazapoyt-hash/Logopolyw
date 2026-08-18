@@ -39,7 +39,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-weight: 300;
+  font-weight: 400;
   overflow-x: hidden;
   min-height: 100vh;
 }
@@ -82,7 +82,7 @@ nav {
 .nav-badge {
   display: inline-flex; align-items: center; gap: 8px;
   padding: 7px 14px; border: 1px solid var(--border); border-radius: 20px;
-  font-size: 12.5px; color: var(--dim); letter-spacing: 0.5px;
+  font-size: 12.5px; font-weight: 500; color: var(--dim); letter-spacing: 0.5px;
 }
 .nav-badge .dot {
   width: 6px; height: 6px; border-radius: 50%; background: var(--accent2);
@@ -107,7 +107,7 @@ nav {
   animation: orbPulse 6s ease-in-out infinite;
 }
 .hero-eyebrow {
-  font-size: 12.5px; letter-spacing: 2.5px; text-transform: uppercase;
+  font-size: 12.5px; font-weight: 600; letter-spacing: 2.5px; text-transform: uppercase;
   color: var(--accent2); margin-bottom: 22px; animation: fadeUp .8s ease both;
 }
 .hero-title {
@@ -117,11 +117,11 @@ nav {
 }
 .hero-title .accent { color: var(--accent2); }
 .hero-title .line2 {
-  display: block; color: var(--dim); font-weight: 400;
+  display: block; color: var(--dim); font-weight: 500;
   font-size: .34em; letter-spacing: 0; margin-top: 14px;
 }
 .hero-desc {
-  max-width: 600px; margin: 28px auto 0; font-size: 15px; line-height: 1.85;
+  max-width: 600px; margin: 28px auto 0; font-size: 15px; font-weight: 400; line-height: 1.85;
   color: var(--dim); animation: fadeUp .8s .2s ease both;
 }
 
@@ -130,7 +130,7 @@ main { display: block; }
 .block { padding: 72px 48px; border-top: 1px solid var(--border); }
 .block-inner { max-width: 1100px; margin: 0 auto; }
 .section-tag {
-  font-size: 12.5px; letter-spacing: 2.5px; text-transform: uppercase;
+  font-size: 12.5px; font-weight: 600; letter-spacing: 2.5px; text-transform: uppercase;
   color: var(--accent2); margin-bottom: 14px;
 }
 .section-title {
@@ -138,7 +138,7 @@ main { display: block; }
   font-size: clamp(26px, 3.4vw, 40px); color: #fff;
   letter-spacing: -1px; line-height: 1.1; margin-bottom: 36px;
 }
-.section-title .dim { color: var(--dim); font-weight: 400; }
+.section-title .dim { color: var(--dim); font-weight: 600; }
 
 .panel {
   background: var(--panel); border: 1px solid var(--border);
@@ -148,23 +148,23 @@ main { display: block; }
   font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px;
   color: #fff; margin-bottom: 8px;
 }
-.hint { color: var(--dim); font-size: 13.5px; }
+.hint { color: var(--dim); font-size: 13.5px; font-weight: 400; }
 .block-hint { display: block; line-height: 1.7; margin-bottom: 20px; }
 
 /* ---------------- Форма ---------------- */
 .form label {
   display: block; margin: 20px 0 8px;
-  font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--dim);
+  font-size: 12px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--dim);
 }
 .form label:first-of-type { margin-top: 0; }
-.form label .hint { text-transform: none; letter-spacing: 0; font-size: 12px; }
+.form label .hint { text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 400; }
 
 .form input[type=text], .form input[type=date], .form textarea, .form select,
 .search, .cat-form input {
   width: 100%; padding: 12px 14px;
   background: var(--bg); color: var(--text);
   border: 1px solid var(--border); border-radius: 8px;
-  font-size: 15px; font-weight: 300;
+  font-size: 15px; font-weight: 500;
 }
 .form textarea { resize: vertical; line-height: 1.7; }
 .form input::placeholder, .form textarea::placeholder,
@@ -193,7 +193,7 @@ main { display: block; }
 .btn {
   padding: 12px 20px; border-radius: 8px;
   background: none; border: 1px solid var(--border); color: var(--text);
-  font-size: 12.5px; letter-spacing: .8px; text-transform: uppercase; transition: all .2s;
+  font-size: 12.5px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; transition: all .2s;
 }
 .btn:hover { color: #fff; border-color: var(--accent); background: var(--glow); }
 .btn.danger:hover { color: #fff; border-color: var(--red); background: rgba(248,81,73,.12); }
@@ -212,7 +212,7 @@ main { display: block; }
 }
 .stat-item span {
   display: block; margin-top: 8px;
-  font-size: 12px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--dim);
+  font-size: 12px; font-weight: 600; letter-spacing: 1.6px; text-transform: uppercase; color: var(--dim);
 }
 .stat-item.alert b { color: var(--red); }
 
@@ -221,12 +221,12 @@ main { display: block; }
 .toolbar-row { display: flex; flex-wrap: wrap; gap: 14px 20px; align-items: flex-end; }
 .inline {
   display: flex; flex-direction: column; gap: 6px;
-  font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--dim);
+  font-size: 12px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--dim);
 }
 .inline select {
   padding: 9px 12px; border-radius: 8px;
   background: var(--bg); color: var(--text);
-  border: 1px solid var(--border); font-size: 14px; font-weight: 300;
+  border: 1px solid var(--border); font-size: 14px; font-weight: 500;
 }
 .inline select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--glow); }
 
@@ -234,10 +234,10 @@ main { display: block; }
 .chip {
   padding: 8px 15px; border-radius: 6px;
   background: none; border: 1px solid var(--border); color: var(--text);
-  font-size: 12.5px; letter-spacing: .8px; text-transform: uppercase; transition: all .2s;
+  font-size: 12.5px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; transition: all .2s;
 }
 .chip:hover { color: #fff; border-color: var(--accent); background: var(--glow); }
-.chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.chip.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
 
 /* ---------------- Список задач ---------------- */
 .task-list { display: flex; flex-direction: column; gap: 10px; }
@@ -267,7 +267,7 @@ main { display: block; }
 
 .task-check {
   flex: none; width: 26px; height: 26px; margin-top: 1px;
-  border-radius: 6px; font-size: 13px; line-height: 1;
+  border-radius: 6px; font-size: 13px; font-weight: 700; line-height: 1;
   background: var(--bg); border: 1px solid var(--border); color: var(--accent2);
   transition: all .2s;
 }
@@ -279,18 +279,18 @@ main { display: block; }
   color: #fff; line-height: 1.35; word-wrap: break-word;
 }
 .task-desc {
-  margin-top: 8px; font-size: 14px; line-height: 1.75; color: #a5b1bd;
+  margin-top: 8px; font-size: 14px; font-weight: 400; line-height: 1.75; color: #a5b1bd;
   white-space: pre-wrap; word-wrap: break-word;
 }
 .task-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 14px; }
-.task-date { font-size: 12px; letter-spacing: .3px; color: var(--dim); }
+.task-date { font-size: 12px; font-weight: 500; letter-spacing: .3px; color: var(--dim); }
 
 .badge {
   padding: 4px 10px; border-radius: 4px;
-  font-size: 12.5px; letter-spacing: .8px; text-transform: uppercase;
+  font-size: 12.5px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase;
   background: rgba(255,255,255,.05); border: 1px solid var(--border); color: var(--dim);
 }
-.badge.prio { border-color: transparent; color: var(--bg); font-weight: 500; }
+.badge.prio { border-color: transparent; color: var(--bg); font-weight: 700; }
 .badge.prio.p0 { background: var(--p0); color: var(--bg); }
 .badge.prio.p1 { background: var(--p1); }
 .badge.prio.p2 { background: var(--p2); }
@@ -303,7 +303,7 @@ main { display: block; }
 
 .task-actions { display: grid; grid-template-columns: repeat(2, 32px); gap: 6px; flex: none; }
 .icon-btn {
-  width: 32px; height: 32px; border-radius: 6px; font-size: 12px;
+  width: 32px; height: 32px; border-radius: 6px; font-size: 12px; font-weight: 700;
   background: var(--bg); border: 1px solid var(--border); color: var(--text);
   transition: all .2s;
 }
@@ -312,7 +312,7 @@ main { display: block; }
 .icon-btn:disabled { opacity: .3; cursor: not-allowed; }
 .icon-btn:disabled:hover { color: var(--dim); border-color: var(--border); background: var(--bg); }
 
-.empty { text-align: center; color: var(--dim); font-size: 15px; padding: 44px 20px; }
+.empty { text-align: center; color: var(--dim); font-size: 15px; font-weight: 500; padding: 44px 20px; }
 
 /* ---------------- Разделы и данные ---------------- */
 .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
@@ -322,11 +322,11 @@ main { display: block; }
   display: inline-flex; align-items: center; gap: 8px;
   padding: 7px 8px 7px 13px; border-radius: 6px;
   background: var(--bg); border: 1px solid var(--border);
-  font-size: 13.5px; color: var(--text);
+  font-size: 13.5px; font-weight: 500; color: var(--text);
 }
-.cat-tag i { font-style: normal; font-size: 12px; font-weight: 500; color: var(--accent2); }
+.cat-tag i { font-style: normal; font-size: 12px; font-weight: 700; color: var(--accent2); }
 .cat-del {
-  width: 20px; height: 20px; border-radius: 4px; line-height: 1; font-size: 12px;
+  width: 20px; height: 20px; border-radius: 4px; line-height: 1; font-size: 12px; font-weight: 700;
   background: none; color: var(--dim); transition: all .2s;
 }
 .cat-del:hover { background: rgba(248,81,73,.15); color: var(--red); }
@@ -343,7 +343,7 @@ footer {
 }
 .footer-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 16px; color: var(--dim); }
 .footer-logo span { color: var(--accent2); }
-.footer-note { font-size: 12.5px; letter-spacing: .8px; color: var(--dim); }
+.footer-note { font-size: 12.5px; font-weight: 500; letter-spacing: .8px; color: var(--dim); }
 
 /* ---------------- Тост ---------------- */
 .toast {
