@@ -11,10 +11,10 @@ const STORAGE_KEY = 'tracker_data_v2';
 const LEGACY_KEY = 'logopoly_tasks_v1';
 
 const PRIORITIES = {
-  0: { label: 'Критичный', icon: '🔥' },
-  1: { label: 'Высокий',   icon: '⬆️' },
-  2: { label: 'Средний',   icon: '➖' },
-  3: { label: 'Низкий',    icon: '⬇️' }
+  0: { label: 'Критичный' },
+  1: { label: 'Высокий' },
+  2: { label: 'Средний' },
+  3: { label: 'Низкий' }
 };
 
 const STATUSES = {
@@ -199,7 +199,8 @@ function startEditing(id) {
 
   btnSubmit.textContent = 'Сохранить изменения';
   btnCancelEdit.classList.remove('hidden');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  /* Форма живёт ниже шапки — подводим к ней, а не к началу страницы */
+  form.scrollIntoView({ behavior: 'smooth', block: 'center' });
   fieldTitle.focus();
 }
 
@@ -293,8 +294,8 @@ function renderCategories() {
     const used = tasks.filter(t => t.cat === c.id).length;
     const remove = c.id === FALLBACK_CAT
       ? ''
-      : `<button type="button" class="tr-cat-del" data-cat="${c.id}" title="Удалить раздел">✕</button>`;
-    return `<span class="tr-cat-tag">${esc(c.name)}<i>${used}</i>${remove}</span>`;
+      : `<button type="button" class="cat-del" data-cat="${c.id}" title="Удалить раздел">✕</button>`;
+    return `<span class="cat-tag">${esc(c.name)}<i>${used}</i>${remove}</span>`;
   }).join('');
 
   fillSelect(fieldCat, categories.map(c => [c.id, c.name]), categories[0].id);
@@ -329,10 +330,10 @@ document.getElementById('filter-cat').addEventListener('change', e => {
   renderList();
 });
 document.getElementById('status-chips').addEventListener('click', e => {
-  const chip = e.target.closest('.tr-chip');
+  const chip = e.target.closest('.chip');
   if (!chip) return;
   filters.status = chip.dataset.status;
-  document.querySelectorAll('#status-chips .tr-chip').forEach(c => c.classList.toggle('active', c === chip));
+  document.querySelectorAll('#status-chips .chip').forEach(c => c.classList.toggle('active', c === chip));
   renderList();
 });
 
@@ -391,11 +392,11 @@ function dueBadge(task) {
   const left = daysLeft(task.due);
   const date = formatDue(task.due);
 
-  if (task.status === 'done') return `<span class="tr-badge due">срок ${date}</span>`;
-  if (left < 0) return `<span class="tr-badge due overdue">просрочено на ${plural(-left)}</span>`;
-  if (left === 0) return `<span class="tr-badge due soon">срок сегодня</span>`;
-  if (left === 1) return `<span class="tr-badge due soon">срок завтра</span>`;
-  return `<span class="tr-badge due">до ${date}</span>`;
+  if (task.status === 'done') return `<span class="badge due">срок ${date}</span>`;
+  if (left < 0) return `<span class="badge due overdue">просрочено на ${plural(-left)}</span>`;
+  if (left === 0) return `<span class="badge due soon">срок сегодня</span>`;
+  if (left === 1) return `<span class="badge due soon">срок завтра</span>`;
+  return `<span class="badge due">до ${date}</span>`;
 }
 
 function plural(days) {
@@ -438,7 +439,7 @@ function renderStats() {
   ];
 
   statsEl.innerHTML = stats.map(s =>
-    `<div class="tr-stat${s.alert && s.value > 0 ? ' alert' : ''}"><b>${s.value}</b><span>${s.label}</span></div>`
+    `<div class="stat-item${s.alert && s.value > 0 ? ' alert' : ''}"><b>${s.value}</b><span>${s.label}</span></div>`
   ).join('');
 }
 
@@ -446,7 +447,7 @@ function renderList() {
   const list = visibleTasks();
 
   if (!list.length) {
-    listEl.innerHTML = `<div class="tr-card tr-empty">${tasks.length
+    listEl.innerHTML = `<div class="panel empty">${tasks.length
       ? 'Под фильтры ничего не подошло.'
       : 'Пока пусто. Добавьте первую задачу — форма выше.'}</div>`;
     return;
@@ -459,33 +460,33 @@ function taskHtml(t) {
   const prio = PRIORITIES[t.priority];
   const statusBadge = t.status === 'new'
     ? ''
-    : `<span class="tr-badge status-${t.status}">${STATUSES[t.status].label}</span>`;
+    : `<span class="badge status-${t.status}">${STATUSES[t.status].label}</span>`;
   const mark = { done: '✔', progress: '◐', hold: '⏸' }[t.status] || '';
 
   return `
-  <article class="tr-task p${t.priority}${t.status === 'done' ? ' done' : ''}${isOverdue(t) ? ' overdue' : ''}">
-    <button class="tr-check" data-act="cycle" data-id="${t.id}"
+  <article class="task p${t.priority}${t.status === 'done' ? ' done' : ''}${isOverdue(t) ? ' overdue' : ''}">
+    <button class="task-check" data-act="cycle" data-id="${t.id}"
             title="Статус: ${STATUSES[t.status].label} → ${STATUSES[STATUSES[t.status].next].label}">${mark}</button>
 
-    <div class="tr-task-main">
-      <div class="tr-task-title">${esc(t.title)}</div>
-      ${t.desc ? `<p class="tr-task-desc">${esc(t.desc)}</p>` : ''}
-      <div class="tr-task-meta">
-        <span class="tr-badge prio p${t.priority}">${prio.icon} ${prio.label}</span>
-        <span class="tr-badge">${esc(catName(t.cat))}</span>
+    <div class="task-main">
+      <div class="task-title">${esc(t.title)}</div>
+      ${t.desc ? `<p class="task-desc">${esc(t.desc)}</p>` : ''}
+      <div class="task-meta">
+        <span class="badge prio p${t.priority}">${prio.label}</span>
+        <span class="badge">${esc(catName(t.cat))}</span>
         ${statusBadge}
         ${dueBadge(t)}
-        <span class="tr-date">создано ${formatDate(t.created)}</span>
+        <span class="task-date">создано ${formatDate(t.created)}</span>
       </div>
     </div>
 
-    <div class="tr-task-actions">
-      <button class="tr-icon-btn" data-act="up" data-id="${t.id}" title="Поднять приоритет"
+    <div class="task-actions">
+      <button class="icon-btn" data-act="up" data-id="${t.id}" title="Поднять приоритет"
               ${t.priority === 0 ? 'disabled' : ''}>▲</button>
-      <button class="tr-icon-btn" data-act="down" data-id="${t.id}" title="Понизить приоритет"
+      <button class="icon-btn" data-act="down" data-id="${t.id}" title="Понизить приоритет"
               ${t.priority === 3 ? 'disabled' : ''}>▼</button>
-      <button class="tr-icon-btn" data-act="edit" data-id="${t.id}" title="Редактировать">✎</button>
-      <button class="tr-icon-btn del" data-act="del" data-id="${t.id}" title="Удалить">🗑</button>
+      <button class="icon-btn" data-act="edit" data-id="${t.id}" title="Редактировать">✎</button>
+      <button class="icon-btn del" data-act="del" data-id="${t.id}" title="Удалить">🗑</button>
     </div>
   </article>`;
 }
@@ -577,7 +578,7 @@ document.getElementById('btn-copy-md').addEventListener('click', async () => {
   const text = list.map(t => {
     const box = t.status === 'done' ? '[x]' : '[ ]';
     const due = t.due ? ` · до ${formatDue(t.due)}` : '';
-    const head = `- ${box} ${PRIORITIES[t.priority].icon} ${PRIORITIES[t.priority].label} · ${catName(t.cat)}${due} — ${t.title}`;
+    const head = `- ${box} ${PRIORITIES[t.priority].label} · ${catName(t.cat)}${due} — ${t.title}`;
     return t.desc ? head + '\n' + t.desc.split('\n').map(l => '      ' + l).join('\n') : head;
   }).join('\n');
 

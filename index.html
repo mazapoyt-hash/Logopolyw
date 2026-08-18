@@ -4,139 +4,175 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Трекер задач</title>
+<meta name="description" content="Личный трекер задач и багов: приоритеты, сроки, статусы и свои разделы. Данные хранятся только в браузере.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="tracker.css">
 </head>
 <body>
 
-<header class="tr-header">
-  <h1>🗂 Трекер <span>задач</span></h1>
-  <p class="tr-subtitle">Баги, идеи и дела — с приоритетами, сроками и статусами</p>
+<nav>
+  <a href="./" class="nav-logo">Task<span>Tracker</span></a>
+  <div class="nav-right">
+    <div class="nav-badge"><span class="dot"></span><span>данные только в этом браузере</span></div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="hero-orb"></div>
+  <p class="hero-eyebrow">Личный трекер задач</p>
+  <h1 class="hero-title">Ни одна задача<br><span class="accent">не теряется</span>.<span class="line2">Приоритеты, сроки, статусы.</span></h1>
+  <p class="hero-desc">Баги, идеи и дела в одном месте — вместо переписки в мессенджере.
+    Без регистрации и без сервера: всё хранится локально и выгружается в файл.</p>
 </header>
 
-<main class="tr-main">
+<main>
 
   <!-- ---------------- Форма создания / редактирования ---------------- -->
-  <section class="tr-card">
-    <form id="task-form" class="tr-form" autocomplete="off">
-      <label for="field-title">Задача</label>
-      <input id="field-title" type="text" maxlength="120" placeholder="Что нужно сделать или что сломалось" required>
+  <section class="block">
+    <div class="block-inner">
+      <p class="section-tag">Новая запись</p>
+      <h2 class="section-title">Что нужно <span class="dim">сделать</span></h2>
 
-      <label for="field-desc">Подробности <span class="tr-hint">(шаги воспроизведения, ссылки — необязательно)</span></label>
-      <textarea id="field-desc" rows="3" maxlength="2000" placeholder="1. Что делаю&#10;2. Что ожидаю&#10;3. Что происходит на самом деле"></textarea>
+      <form id="task-form" class="panel form" autocomplete="off">
+        <label for="field-title">Задача</label>
+        <input id="field-title" type="text" maxlength="120" placeholder="Что нужно сделать или что сломалось" required>
 
-      <div class="tr-form-row">
-        <div>
-          <label for="field-priority">Приоритет</label>
-          <select id="field-priority">
-            <option value="0">🔥 Критичный</option>
-            <option value="1">⬆️ Высокий</option>
-            <option value="2" selected>➖ Средний</option>
-            <option value="3">⬇️ Низкий</option>
-          </select>
+        <label for="field-desc">Подробности <span class="hint">(шаги воспроизведения, ссылки — необязательно)</span></label>
+        <textarea id="field-desc" rows="3" maxlength="2000" placeholder="1. Что делаю&#10;2. Что ожидаю&#10;3. Что происходит на самом деле"></textarea>
+
+        <div class="form-row">
+          <div>
+            <label for="field-priority">Приоритет</label>
+            <select id="field-priority">
+              <option value="0">Критичный</option>
+              <option value="1">Высокий</option>
+              <option value="2" selected>Средний</option>
+              <option value="3">Низкий</option>
+            </select>
+          </div>
+          <div>
+            <label for="field-cat">Раздел</label>
+            <select id="field-cat"></select>
+          </div>
+          <div>
+            <label for="field-status">Статус</label>
+            <select id="field-status">
+              <option value="new" selected>Новая</option>
+              <option value="progress">В работе</option>
+              <option value="hold">Отложена</option>
+              <option value="done">Готово</option>
+            </select>
+          </div>
+          <div>
+            <label for="field-due">Срок <span class="hint">(если есть)</span></label>
+            <input id="field-due" type="date">
+          </div>
         </div>
-        <div>
-          <label for="field-cat">Раздел</label>
-          <select id="field-cat"></select>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-primary" id="btn-submit">Добавить задачу</button>
+          <button type="button" class="btn hidden" id="btn-cancel-edit">Отменить правку</button>
         </div>
-        <div>
-          <label for="field-status">Статус</label>
-          <select id="field-status">
-            <option value="new" selected>Новая</option>
-            <option value="progress">В работе</option>
-            <option value="hold">Отложена</option>
-            <option value="done">Готово</option>
-          </select>
-        </div>
-        <div>
-          <label for="field-due">Срок <span class="tr-hint">(если есть)</span></label>
-          <input id="field-due" type="date">
-        </div>
-      </div>
-
-      <div class="tr-form-actions">
-        <button type="submit" class="action-btn primary" id="btn-submit">Добавить задачу</button>
-        <button type="button" class="action-btn hidden" id="btn-cancel-edit">Отменить правку</button>
-      </div>
-    </form>
-  </section>
-
-  <!-- ---------------- Статистика ---------------- -->
-  <section id="stats" class="tr-stats"></section>
-
-  <!-- ---------------- Фильтры и сортировка ---------------- -->
-  <section class="tr-card tr-toolbar">
-    <input id="filter-search" type="search" placeholder="🔍 Поиск по названию и описанию" class="tr-search">
-
-    <div class="tr-toolbar-row">
-      <label class="tr-inline">Сортировка
-        <select id="sort-mode">
-          <option value="priority" selected>По приоритету</option>
-          <option value="due">По сроку</option>
-          <option value="created-desc">Сначала новые</option>
-          <option value="created-asc">Сначала старые</option>
-          <option value="status">По статусу</option>
-        </select>
-      </label>
-
-      <label class="tr-inline">Приоритет
-        <select id="filter-priority">
-          <option value="all" selected>Любой</option>
-          <option value="0">Критичный</option>
-          <option value="1">Высокий</option>
-          <option value="2">Средний</option>
-          <option value="3">Низкий</option>
-        </select>
-      </label>
-
-      <label class="tr-inline">Раздел
-        <select id="filter-cat"></select>
-      </label>
-
-      <div class="tr-chips" id="status-chips">
-        <button type="button" class="tr-chip active" data-status="all">Все</button>
-        <button type="button" class="tr-chip" data-status="open">Открытые</button>
-        <button type="button" class="tr-chip" data-status="new">Новые</button>
-        <button type="button" class="tr-chip" data-status="progress">В работе</button>
-        <button type="button" class="tr-chip" data-status="hold">Отложенные</button>
-        <button type="button" class="tr-chip" data-status="done">Готовые</button>
-      </div>
+      </form>
     </div>
   </section>
 
-  <!-- ---------------- Список ---------------- -->
-  <section id="task-list" class="tr-list"></section>
+  <!-- ---------------- Статистика ---------------- -->
+  <div id="stats" class="stats-bar"></div>
 
-  <!-- ---------------- Разделы ---------------- -->
-  <section class="tr-card">
-    <h3>Разделы</h3>
-    <p class="tr-hint tr-block-hint">Свои категории задач. Удаление раздела не трогает задачи —
-      они переедут в «Другое».</p>
-    <div id="cat-manager" class="tr-cat-manager"></div>
-    <form id="cat-form" class="tr-cat-form" autocomplete="off">
-      <input id="cat-input" type="text" maxlength="24" placeholder="Новый раздел">
-      <button type="submit" class="action-btn">Добавить</button>
-    </form>
+  <!-- ---------------- Фильтры и список ---------------- -->
+  <section class="block">
+    <div class="block-inner">
+      <p class="section-tag">Список задач</p>
+      <h2 class="section-title">Сначала <span class="dim">самое важное</span></h2>
+
+      <div class="panel toolbar">
+        <input id="filter-search" type="search" placeholder="Поиск по названию и описанию" class="search">
+
+        <div class="toolbar-row">
+          <label class="inline">Сортировка
+            <select id="sort-mode">
+              <option value="priority" selected>По приоритету</option>
+              <option value="due">По сроку</option>
+              <option value="created-desc">Сначала новые</option>
+              <option value="created-asc">Сначала старые</option>
+              <option value="status">По статусу</option>
+            </select>
+          </label>
+
+          <label class="inline">Приоритет
+            <select id="filter-priority">
+              <option value="all" selected>Любой</option>
+              <option value="0">Критичный</option>
+              <option value="1">Высокий</option>
+              <option value="2">Средний</option>
+              <option value="3">Низкий</option>
+            </select>
+          </label>
+
+          <label class="inline">Раздел
+            <select id="filter-cat"></select>
+          </label>
+
+          <div class="chips" id="status-chips">
+            <button type="button" class="chip active" data-status="all">Все</button>
+            <button type="button" class="chip" data-status="open">Открытые</button>
+            <button type="button" class="chip" data-status="new">Новые</button>
+            <button type="button" class="chip" data-status="progress">В работе</button>
+            <button type="button" class="chip" data-status="hold">Отложенные</button>
+            <button type="button" class="chip" data-status="done">Готовые</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="task-list" class="task-list"></div>
+    </div>
   </section>
 
-  <!-- ---------------- Данные ---------------- -->
-  <section class="tr-card">
-    <h3>Данные</h3>
-    <p class="tr-hint tr-block-hint">Задачи хранятся в этом браузере (localStorage). Чтобы перенести
-      их на другое устройство или сохранить резервную копию — выгрузите файл.</p>
-    <div class="tr-data-actions">
-      <button type="button" class="action-btn" id="btn-export">⬇️ Выгрузить JSON</button>
-      <button type="button" class="action-btn" id="btn-import">⬆️ Загрузить JSON</button>
-      <button type="button" class="action-btn" id="btn-copy-md">📋 Скопировать списком</button>
-      <button type="button" class="action-btn danger" id="btn-clear-done">🧹 Удалить готовые</button>
-      <input type="file" id="import-file" accept="application/json,.json" class="hidden">
+  <!-- ---------------- Разделы и данные ---------------- -->
+  <section class="block">
+    <div class="block-inner">
+      <p class="section-tag">Настройки</p>
+      <h2 class="section-title">Разделы <span class="dim">и данные</span></h2>
+
+      <div class="settings-grid">
+        <div class="panel">
+          <h3 class="panel-title">Разделы</h3>
+          <p class="hint block-hint">Свои категории задач. Удаление раздела не трогает задачи —
+            они переедут в «Другое».</p>
+          <div id="cat-manager" class="cat-manager"></div>
+          <form id="cat-form" class="cat-form" autocomplete="off">
+            <input id="cat-input" type="text" maxlength="24" placeholder="Новый раздел">
+            <button type="submit" class="btn">Добавить</button>
+          </form>
+        </div>
+
+        <div class="panel">
+          <h3 class="panel-title">Данные</h3>
+          <p class="hint block-hint">Задачи хранятся в localStorage этого браузера. Чтобы перенести
+            их на другое устройство или сохранить резервную копию — выгрузите файл.</p>
+          <div class="data-actions">
+            <button type="button" class="btn" id="btn-export">Выгрузить JSON</button>
+            <button type="button" class="btn" id="btn-import">Загрузить JSON</button>
+            <button type="button" class="btn" id="btn-copy-md">Скопировать списком</button>
+            <button type="button" class="btn danger" id="btn-clear-done">Удалить готовые</button>
+            <input type="file" id="import-file" accept="application/json,.json" class="hidden">
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
 </main>
 
-<div id="toast" class="tr-toast hidden"></div>
+<footer>
+  <div class="footer-logo">Task<span>Tracker</span></div>
+  <div class="footer-note">Локальное хранилище · Без регистрации · Без серверов</div>
+</footer>
+
+<div id="toast" class="toast hidden"></div>
 
 <script src="tracker.js"></script>
 </body>
